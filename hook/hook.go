@@ -13,6 +13,9 @@ type Hook interface {
 type HookIOWriter struct {
 	Output io.Writer
 }
+func NewHookIOWriter (output io.Writer) (*HookIOWriter) {
+  return &HookIOWriter{Output: output}
+}
 func (hook *HookIOWriter) Event(event *event.Event) (error) {
 	hook.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 

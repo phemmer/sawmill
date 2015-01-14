@@ -8,15 +8,16 @@ import (
 	"os"
 )
 
+// these are copied here for convenience
 const (
-	Emergency, Emerg event.Level = iota, iota
-	Alert, Alrt
-	Critical, Crit
-	Error, Err
-	Warning, Warn
-	Notice, _
-	Info, _
-	Debug, Dbg
+	Emergency, Emerg = event.Emergency, event.Emerg
+	Alert, Alrt = event.Alert, event.Alrt
+	Critical, Crit = event.Critical, event.Crit
+	Error, Err = event.Error, event.Err
+	Warning, Warn = event.Warning, event.Warn
+	Notice = event.Notice
+	Info = event.Info
+	Debug, Dbg = event.Debug, event.Debug
 )
 
 type Fields map[string]interface{}

@@ -1,10 +1,9 @@
 package sawmill
 
 import (
-	"fmt"
 	"time"
 	"github.com/phemmer/sawmill/event"
-	"io"
+	"github.com/phemmer/sawmill/hook"
 	"os"
 )
 
@@ -27,7 +26,7 @@ type Fields map[string]interface{}
 type hookTableEntry struct {
 	name string
 	levelMin, levelMax event.Level
-	hook Hook
+	hook hook.Hook
 }
 type Logger struct {
 	hookTable []*hookTableEntry
@@ -39,7 +38,7 @@ func NewLogger() (*Logger) {
 	return &Logger{}
 }
 
-func (logger *Logger) AddHook(name string, hook Hook, levelMin event.Level, levelMax event.Level) {
+func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level, levelMax event.Level) {
 	//TODO lock
 	logger.hookTable = append(logger.hookTable, &hookTableEntry{
 		name: name,
@@ -50,8 +49,8 @@ func (logger *Logger) AddHook(name string, hook Hook, levelMin event.Level, leve
 }
 
 func (logger *Logger) InitStdStreams() {
-	logger.AddHook("stdout", &HookIOWriter{output: os.Stdout}, Debug, Notice)
-	logger.AddHook("stderr", &HookIOWriter{output: os.Stderr}, Warning, Emergency)
+	logger.AddHook("stdout", &hook.HookIOWriter{Output: os.Stdout}, Debug, Notice)
+	logger.AddHook("stderr", &hook.HookIOWriter{Output: os.Stderr}, Warning, Emergency)
 }
 
 func Event(level event.Level, message string, fields interface{}) {
@@ -76,17 +75,4 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		hookTableEntry.hook.Event(logEvent)
 	}
 	//fmt.Printf("level=%d message=%s fields=%s:%#v\n", level, message, reflect.TypeOf(fields), fields)
-}
-
-type Hook interface {
-	Event(event *event.Event) error
-}
-
-type HookIOWriter struct {
-	output io.Writer
-}
-func (hook *HookIOWriter) Event(event *event.Event) (error) {
-	hook.output.Write([]byte(fmt.Sprintf("%#v\n", event)))
-
-	return nil
 }

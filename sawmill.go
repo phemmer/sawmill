@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/hook"
+	"github.com/phemmer/sawmill/formatter"
 	"os"
 )
 
@@ -49,8 +50,8 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 }
 
 func (logger *Logger) InitStdStreams() {
-	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout), Debug, Notice)
-	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr), Warning, Emergency)
+	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, formatter.NewTextFormatter()), Debug, Notice)
+	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, formatter.NewTextFormatter()), Warning, Emergency)
 }
 
 func Event(level event.Level, message string, fields interface{}) {

@@ -19,7 +19,8 @@ func NewHookIOWriter (output io.Writer, formatter formatter.Formatter) (*HookIOW
 }
 func (hook *HookIOWriter) Event(event *event.Event) (error) {
 	//hook.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
-	hook.Output.Write(hook.Formatter.Format(event))
+	buf := append(hook.Formatter.Format(event), '\n')
+	hook.Output.Write(buf)
 
 	return nil
 }

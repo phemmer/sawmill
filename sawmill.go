@@ -5,6 +5,7 @@ import (
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/hook"
 	"github.com/phemmer/sawmill/formatter"
+	"github.com/mitchellh/copystructure"
 	"os"
 )
 
@@ -62,11 +63,12 @@ func Event(level event.Level, message string, fields interface{}) {
 	logger.Event(level, message, fields)
 }
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
+	fieldsCopy, _ := copystructure.Copy(fields)
 	logEvent := &event.Event{
 		Timestamp: time.Now(),
 		Level: level,
 		Message: message,
-		Fields: fields,
+		Fields: fieldsCopy,
 	}
 	//TODO lock table, copy it, release lock, iterate over copy
 	for _, hookTableEntry := range logger.hookTable {

@@ -22,6 +22,7 @@ type Logger struct {
 
 func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level, levelMax event.Level) {
 	//TODO lock
+	//TODO check name collision
 	logger.hookTable = append(logger.hookTable, &hookTableEntry{
 		name: name,
 		hook: hook,
@@ -50,7 +51,6 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		}
 		hookTableEntry.hook.Event(logEvent)
 	}
-	//fmt.Printf("level=%d message=%s fields=%s:%#v\n", level, message, reflect.TypeOf(fields), fields)
 }
 
 

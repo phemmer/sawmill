@@ -18,10 +18,9 @@ func NewTextFormatter() *TextFormatter {
   return &TextFormatter{}
 }
 func (formatter *TextFormatter) Format(event *event.Event) ([]byte) {
-  //fmt.Printf("Format <%#v>\n", event)
   fields := flatten(event.Fields)
 
-  buf := []byte{}
+  buf := []byte(fmt.Sprintf("%s ", event.Message))
 
   flatFields := flatten(fields)
   keys := make([]string, len(flatFields))
@@ -33,9 +32,8 @@ func (formatter *TextFormatter) Format(event *event.Event) ([]byte) {
   sort.Strings(keys)
   for _, k := range keys {
     v := flatFields[k]
-    buf = append(buf, []byte(fmt.Sprintf("%s=%s ", k, v))...)
+    buf = append(buf, []byte(fmt.Sprintf("%s=%v ", k, v))...)
   }
-  //return []byte(fmt.Sprintf("%#v\n", event))
   return buf
 }
 
@@ -43,32 +41,20 @@ func flatten(fields interface{}) (map[string]interface{}) {
   flat := make(map[string]interface{})
 
   value := reflect.ValueOf(fields)
-  if value.Kind() == reflect.Ptr {
+  for value.Kind() == reflect.Ptr { // shouldn't ever happen since deStruct() also does this
     value = value.Elem()
   }
 
   //fmt.Printf("flattening: %#v\n", fields)
-  if ! value.IsValid() {
-    fmt.Printf("WAT? %#v\n", fields)
-  } else if value.Kind() == reflect.Struct {
-    for i := 0; i < value.NumField(); i++ {
-      field := value.Field(i)
-      k := field.Type().Name()
-      //v := field.Interface()
-      flattenValue(flat, k, field)
-    }
-  } else if value.Kind() == reflect.Map {
+  if value.Kind() == reflect.Map {
     for _, kV := range value.MapKeys() {
       vV := value.MapIndex(kV)
       k := kV.Interface()
-      //v := vV.Interface()
       flattenValue(flat, k, vV)
     }
   } else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
-    k := 0
-    for v := range value.Interface().([]interface{}) {
+    for k, v := range value.Interface().([]interface{}) {
       flattenValue(flat, k, reflect.ValueOf(v))
-      k += 1
     }
   } else {
     if value.IsValid() {

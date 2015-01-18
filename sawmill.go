@@ -5,8 +5,8 @@ import (
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/hook"
 	"github.com/phemmer/sawmill/formatter"
-	"github.com/mitchellh/copystructure"
 	"os"
+	"reflect"
 )
 
 // these are copied here for convenience
@@ -63,7 +63,7 @@ func Event(level event.Level, message string, fields interface{}) {
 	logger.Event(level, message, fields)
 }
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
-	fieldsCopy, _ := copystructure.Copy(fields)
+	fieldsCopy := deStruct(fields)
 	logEvent := &event.Event{
 		Timestamp: time.Now(),
 		Level: level,
@@ -78,4 +78,42 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		hookTableEntry.hook.Event(logEvent)
 	}
 	//fmt.Printf("level=%d message=%s fields=%s:%#v\n", level, message, reflect.TypeOf(fields), fields)
+}
+
+
+
+func deStruct(obj interface{}) (interface{}) {
+	value := reflect.ValueOf(obj)
+	for value.Kind() == reflect.Ptr {
+		value = value.Elem()
+	}
+
+	if value.Kind() == reflect.Struct {
+		result := make(map[string]interface{})
+		for i := 0; i < value.NumField(); i++ {
+			field := value.Field(i)
+			if ! field.CanInterface() { // skip if it's unexported
+				continue
+			}
+			k := field.Type().Name()
+			result[k] = deStruct(field.Interface())
+		}
+		return result
+	} else if value.Kind() == reflect.Map {
+		result := make(map[interface{}]interface{})
+		for _, kValue := range value.MapKeys() {
+			vValue := value.MapIndex(kValue)
+			k := kValue.Interface()
+			result[deStruct(k)] = deStruct(vValue.Interface())
+		}
+		return result
+	} else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
+		var result []interface{}
+		for v := range value.Interface().([]interface{}) {
+			result = append(result, deStruct(v))
+		}
+		return result
+	}
+	// scalar
+	return value.Interface()
 }

@@ -1,10 +1,7 @@
 package event
 
 import (
-	//"reflect"
   "time"
-	//"github.com/fatih/structs"
-	//"code.google.com/p/rog-go/exp/deepcopy"
 )
 
 type Level int

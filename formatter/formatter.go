@@ -20,7 +20,7 @@ func NewTextFormatter() *TextFormatter {
 func (formatter *TextFormatter) Format(event *event.Event) ([]byte) {
   fields := flatten(event.Fields)
 
-  buf := []byte(fmt.Sprintf("%s ", event.Message))
+  buf := []byte(fmt.Sprintf("%s> %s ", event.LevelName(), event.Message))
 
   flatFields := flatten(fields)
   keys := make([]string, len(flatFields))

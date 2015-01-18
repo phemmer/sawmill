@@ -18,12 +18,29 @@ const (
 	Info, _
 	Debug, Dbg
 )
+var LevelNames = [8]string{
+	"Emergency",
+	"Alert",
+	"Critical",
+	"Error",
+	"Warning",
+	"Notice",
+	"Info",
+	"Debug",
+}
+func LevelName(level Level) string {
+	return LevelNames[level]
+}
 
 type Event struct {
 	Level Level
 	Timestamp time.Time
 	Message string
 	Fields interface{}
+}
+
+func (event *Event) LevelName() string {
+	return LevelName(event.Level)
 }
 
 func (event *Event) FieldsMap (map[string]interface{}) {

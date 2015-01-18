@@ -90,12 +90,13 @@ func deStruct(obj interface{}) (interface{}) {
 
 	if value.Kind() == reflect.Struct {
 		result := make(map[string]interface{})
+		structType := reflect.TypeOf(value.Interface())
 		for i := 0; i < value.NumField(); i++ {
 			field := value.Field(i)
 			if ! field.CanInterface() { // skip if it's unexported
 				continue
 			}
-			k := field.Type().Name()
+			k := structType.Field(i).Name
 			result[k] = deStruct(field.Interface())
 		}
 		return result

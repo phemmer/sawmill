@@ -42,11 +42,13 @@ var colors = ansiColorCodes{
 
 type TextFormatter struct {
   UseColor bool
+	DoAlignment bool
 	TimeFormat string
 }
 func NewTextFormatter(color bool) *TextFormatter {
   return &TextFormatter{
 		UseColor: color,
+		DoAlignment: true,
 		TimeFormat: "2006-01-02_15:04:05.000",
 	}
 }
@@ -56,7 +58,7 @@ func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
 	message := formatter.FormatMessage(logEvent)
 	fields := formatter.FormatFields(logEvent)
 
-  buf := []byte(fmt.Sprintf("%s %s> %s %s", timestamp, level, message, fields))
+  buf := []byte(fmt.Sprintf("%s %s %s %s", timestamp, level, message, fields))
 
 	return buf
 }
@@ -80,10 +82,20 @@ func (formatter *TextFormatter) FormatLevel(logEvent *event.Event) string {
 		levelName = logEvent.LevelName()
 	}
 
-	return levelName
+	padding := []byte{}
+	if formatter.DoAlignment {
+		for i := len(logEvent.LevelName()); i < len(event.LevelName(event.Emergency)); i++ {
+			padding = append(padding, ' ')
+		}
+	}
+
+	return fmt.Sprintf("%s%s", levelName, padding)
 }
 func (formatter *TextFormatter) FormatMessage(logEvent *event.Event) string {
-	return logEvent.Message
+	if formatter.DoAlignment {
+		return fmt.Sprintf("%-30s", logEvent.Message)
+	}
+		return logEvent.Message
 }
 func (formatter *TextFormatter) FormatFields(logEvent *event.Event) string {
   flatFields := flatten(logEvent.Fields)

@@ -11,15 +11,31 @@ import (
 func IsTerminal(stream interface{Fd() uintptr}) bool {
   return terminal.IsTerminal(int(stream.Fd()))
 }
-var colors = terminal.EscapeCodes{
-	Black:   []byte{27, '[', '3', '0', 'm'},
-	Red:     []byte{27, '[', '3', '1', 'm'},
-	Green:   []byte{27, '[', '3', '2', 'm'},
-	Yellow:  []byte{27, '[', '3', '3', 'm'},
-	Blue:    []byte{27, '[', '3', '4', 'm'},
-	Magenta: []byte{27, '[', '3', '5', 'm'},
-	Cyan:    []byte{27, '[', '3', '6', 'm'},
-	White:   []byte{27, '[', '3', '7', 'm'},
+
+type ansiColorCodes struct {
+	Bold, Normal, Black, BlackBold, Red, RedBold, Green, GreenBold, Yellow, YellowBold, Blue, BlueBold, Magenta, MagentaBold, Cyan, CyanBold, White, WhiteBold, Underline, Reset []byte
+}
+var colors = ansiColorCodes{
+	Bold:        []byte{27, '[', '1', 'm'},
+	Normal:      []byte{27, '[', '2', '2', 'm'},
+	Black:       []byte{27, '[', '3', '0', 'm'},
+	BlackBold:   []byte{27, '[', '3', '0', ';', '1', 'm'},
+	Red:         []byte{27, '[', '3', '1', 'm'},
+	RedBold:     []byte{27, '[', '3', '1', ';', '1', 'm'},
+	Green:       []byte{27, '[', '3', '2', 'm'},
+	GreenBold:   []byte{27, '[', '3', '2', ';', '1', 'm'},
+	Yellow:      []byte{27, '[', '3', '3', 'm'},
+	YellowBold:  []byte{27, '[', '3', '3', ';', '1', 'm'},
+	Blue:        []byte{27, '[', '3', '4', 'm'},
+	BlueBold:    []byte{27, '[', '3', '4', ';', '1', 'm'},
+	Magenta:     []byte{27, '[', '3', '5', 'm'},
+	MagentaBold: []byte{27, '[', '3', '5', ';', '1', 'm'},
+	Cyan:        []byte{27, '[', '3', '6', 'm'},
+	CyanBold:    []byte{27, '[', '3', '6', ';', '1', 'm'},
+	White:       []byte{27, '[', '3', '7', 'm'},
+	WhiteBold:   []byte{27, '[', '3', '7', ';', '1', 'm'},
+
+	Underline:   []byte{27, '[', '4', 'm'},
 
 	Reset:   []byte{27, '[', '0', 'm'},
 }
@@ -87,6 +103,10 @@ func (formatter *TextFormatter) FormatFields(logEvent *event.Event) string {
 			buf = append(buf, ' ')
 		}
     v := flatFields[k]
+
+		if formatter.UseColor {
+			k = fmt.Sprintf("%s%s%s", colors.Cyan, k, colors.Reset)
+		}
     buf = append(buf, []byte(fmt.Sprintf("%s=%v", k, v))...)
   }
 

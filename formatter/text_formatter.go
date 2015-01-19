@@ -35,25 +35,14 @@ func NewTextFormatter(color bool) *TextFormatter {
 	}
 }
 func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
-  fields := flatten(logEvent.Fields)
-
 	timestamp := formatter.FormatTimestamp(logEvent)
-	levelName := formatter.FormatLevel(logEvent)
-  buf := []byte(fmt.Sprintf("%s %s> %s ", timestamp, levelName, logEvent.Message))
+	level := formatter.FormatLevel(logEvent)
+	message := formatter.FormatMessage(logEvent)
+	fields := formatter.FormatFields(logEvent)
 
-  flatFields := flatten(fields)
-  keys := make([]string, len(flatFields))
-  i := 0
-  for k := range flatFields {
-    keys[i] = k
-    i += 1
-  }
-  sort.Strings(keys)
-  for _, k := range keys {
-    v := flatFields[k]
-    buf = append(buf, []byte(fmt.Sprintf("%s=%v ", k, v))...)
-  }
-  return buf
+  buf := []byte(fmt.Sprintf("%s %s> %s %s", timestamp, level, message, fields))
+
+	return buf
 }
 
 func (formatter *TextFormatter) FormatTimestamp(logEvent *event.Event) string {
@@ -76,6 +65,32 @@ func (formatter *TextFormatter) FormatLevel(logEvent *event.Event) string {
 	}
 
 	return levelName
+}
+func (formatter *TextFormatter) FormatMessage(logEvent *event.Event) string {
+	return logEvent.Message
+}
+func (formatter *TextFormatter) FormatFields(logEvent *event.Event) string {
+  flatFields := flatten(logEvent.Fields)
+
+  keys := make([]string, len(flatFields))
+  i := 0
+  for k := range flatFields {
+    keys[i] = k
+    i += 1
+  }
+  sort.Strings(keys)
+
+	buf := []byte{}
+
+  for _, k := range keys {
+		if len(buf) > 0 {
+			buf = append(buf, ' ')
+		}
+    v := flatFields[k]
+    buf = append(buf, []byte(fmt.Sprintf("%s=%v", k, v))...)
+  }
+
+  return string(buf)
 }
 
 func flatten(fields interface{}) (map[string]interface{}) {

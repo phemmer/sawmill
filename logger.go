@@ -32,8 +32,8 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 }
 
 func (logger *Logger) InitStdStreams() {
-	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, formatter.NewTextFormatter()), Debug, Notice)
-	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, formatter.NewTextFormatter()), Warning, Emergency)
+	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, formatter.NewTextFormatter(formatter.IsTerminal(os.Stdout))), Debug, Notice)
+	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, formatter.NewTextFormatter(formatter.IsTerminal(os.Stderr))), Warning, Emergency)
 }
 
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {

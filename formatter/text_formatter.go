@@ -2,20 +2,53 @@ package formatter
 
 import (
   "github.com/phemmer/sawmill/event"
+  "golang.org/x/crypto/ssh/terminal"
   "fmt"
   "reflect"
   "sort"
 )
 
-type TextFormatter struct {
+func IsTerminal(stream interface{Fd() uintptr}) bool {
+  return terminal.IsTerminal(int(stream.Fd()))
 }
-func NewTextFormatter() *TextFormatter {
-  return &TextFormatter{}
-}
-func (formatter *TextFormatter) Format(event *event.Event) ([]byte) {
-  fields := flatten(event.Fields)
+var colors = terminal.EscapeCodes{
+	Black:   []byte{27, '[', '3', '0', 'm'},
+	Red:     []byte{27, '[', '3', '1', 'm'},
+	Green:   []byte{27, '[', '3', '2', 'm'},
+	Yellow:  []byte{27, '[', '3', '3', 'm'},
+	Blue:    []byte{27, '[', '3', '4', 'm'},
+	Magenta: []byte{27, '[', '3', '5', 'm'},
+	Cyan:    []byte{27, '[', '3', '6', 'm'},
+	White:   []byte{27, '[', '3', '7', 'm'},
 
-  buf := []byte(fmt.Sprintf("%s %s> %s ", event.Timestamp.Format("2006-01-02_15:04:05.00"), event.LevelName(), event.Message))
+	Reset:   []byte{27, '[', '0', 'm'},
+}
+
+type TextFormatter struct {
+  color bool
+}
+func NewTextFormatter(color bool) *TextFormatter {
+  return &TextFormatter{color: color}
+}
+func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
+  fields := flatten(logEvent.Fields)
+
+  timestamp := logEvent.Timestamp.Format("2006-01-02_15:04:05.00")
+	var levelName string
+	if formatter.color {
+		var levelColor []byte
+		if logEvent.Level <= event.Error {
+			levelColor = colors.Red
+		} else if logEvent.Level == event.Warning {
+			levelColor = colors.Yellow
+		} else {
+			levelColor = colors.Blue
+		}
+		levelName = fmt.Sprintf("%s%s%s", levelColor, logEvent.LevelName(), colors.Reset)
+	} else {
+		levelName = logEvent.LevelName()
+	}
+  buf := []byte(fmt.Sprintf("%s %s> %s ", timestamp, levelName, logEvent.Message))
 
   flatFields := flatten(fields)
   keys := make([]string, len(flatFields))

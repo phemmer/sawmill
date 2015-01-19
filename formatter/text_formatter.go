@@ -25,29 +25,20 @@ var colors = terminal.EscapeCodes{
 }
 
 type TextFormatter struct {
-  color bool
+  UseColor bool
+	TimeFormat string
 }
 func NewTextFormatter(color bool) *TextFormatter {
-  return &TextFormatter{color: color}
+  return &TextFormatter{
+		UseColor: color,
+		TimeFormat: "2006-01-02_15:04:05.000",
+	}
 }
 func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
   fields := flatten(logEvent.Fields)
 
-  timestamp := logEvent.Timestamp.Format("2006-01-02_15:04:05.00")
-	var levelName string
-	if formatter.color {
-		var levelColor []byte
-		if logEvent.Level <= event.Error {
-			levelColor = colors.Red
-		} else if logEvent.Level == event.Warning {
-			levelColor = colors.Yellow
-		} else {
-			levelColor = colors.Blue
-		}
-		levelName = fmt.Sprintf("%s%s%s", levelColor, logEvent.LevelName(), colors.Reset)
-	} else {
-		levelName = logEvent.LevelName()
-	}
+	timestamp := formatter.FormatTimestamp(logEvent)
+	levelName := formatter.FormatLevel(logEvent)
   buf := []byte(fmt.Sprintf("%s %s> %s ", timestamp, levelName, logEvent.Message))
 
   flatFields := flatten(fields)
@@ -63,6 +54,28 @@ func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
     buf = append(buf, []byte(fmt.Sprintf("%s=%v ", k, v))...)
   }
   return buf
+}
+
+func (formatter *TextFormatter) FormatTimestamp(logEvent *event.Event) string {
+	return logEvent.Timestamp.Format(formatter.TimeFormat)
+}
+func (formatter *TextFormatter) FormatLevel(logEvent *event.Event) string {
+	var levelName string
+	if formatter.UseColor {
+		var levelColor []byte
+		if logEvent.Level <= event.Error {
+			levelColor = colors.Red
+		} else if logEvent.Level == event.Warning {
+			levelColor = colors.Yellow
+		} else {
+			levelColor = colors.Blue
+		}
+		levelName = fmt.Sprintf("%s%s%s", levelColor, logEvent.LevelName(), colors.Reset)
+	} else {
+		levelName = logEvent.LevelName()
+	}
+
+	return levelName
 }
 
 func flatten(fields interface{}) (map[string]interface{}) {

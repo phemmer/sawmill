@@ -4,6 +4,7 @@ import (
 	"time"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/hook"
+	"github.com/phemmer/sawmill/hook/syslog"
 	"github.com/phemmer/sawmill/formatter"
 	"os"
 	"reflect"
@@ -34,6 +35,15 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 func (logger *Logger) InitStdStreams() {
 	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, formatter.NewTextFormatter(formatter.IsTerminal(os.Stdout))), Debug, Notice)
 	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, formatter.NewTextFormatter(formatter.IsTerminal(os.Stderr))), Warning, Emergency)
+}
+func (logger *Logger) InitStdSyslog() (error) {
+	syslogHook, err := syslog.New("", "", 0, nil)
+	if err != nil {
+		return err
+	}
+	logger.AddHook("syslog", syslogHook, Debug, Emergency)
+
+	return nil
 }
 
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {

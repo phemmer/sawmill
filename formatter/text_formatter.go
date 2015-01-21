@@ -5,7 +5,9 @@ import (
   "golang.org/x/crypto/ssh/terminal"
   "fmt"
   "reflect"
-  "sort"
+  //"sort"
+	"bytes"
+	"text/template"
 )
 
 func IsTerminal(stream interface{Fd() uintptr}) bool {
@@ -40,89 +42,67 @@ var colors = ansiColorCodes{
 	Reset:   []byte{27, '[', '0', 'm'},
 }
 
+const (
+	SIMPLE_FORMAT = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
+	CONSOLE_COLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -9}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
+	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -9}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
+)
+
 type TextFormatter struct {
-  UseColor bool
-	DoAlignment bool
-	TimeFormat string
+	Template *template.Template
 }
-func NewTextFormatter(color bool) *TextFormatter {
-  return &TextFormatter{
-		UseColor: color,
-		DoAlignment: true,
-		TimeFormat: "2006-01-02_15:04:05.000",
+func NewTextFormatter(templateString string) *TextFormatter {
+	if templateString == "" {
+		templateString = SIMPLE_FORMAT
 	}
+	formatterTemplate, err := template.New("").Parse(templateString)
+	if err != nil {
+		fmt.Printf("Error parsing template: %s", err)
+		//TODO proper error handler
+	}
+	textFormatter := &TextFormatter{
+		Template: formatterTemplate,
+	}
+	return textFormatter
 }
 func (formatter *TextFormatter) Format(logEvent *event.Event) ([]byte) {
-	timestamp := formatter.FormatTimestamp(logEvent)
-	level := formatter.FormatLevel(logEvent)
-	message := formatter.FormatMessage(logEvent)
-	fields := formatter.FormatFields(logEvent)
-
-  buf := []byte(fmt.Sprintf("%s %s %s %s", timestamp, level, message, fields))
-
-	return buf
+	var templateBuffer bytes.Buffer
+	flatFields := flatten(logEvent.Fields)
+	templateContext := &TemplateContext{Event: logEvent, Fields: flatFields}
+	err := formatter.Template.Execute(&templateBuffer, templateContext)
+	if err != nil {
+		fmt.Printf("Error executing template: %s\n", err)
+		//TODO proper error handler
+	}
+	return templateBuffer.Bytes()
 }
 
-func (formatter *TextFormatter) FormatTimestamp(logEvent *event.Event) string {
-	return logEvent.Timestamp.Format(formatter.TimeFormat)
+type TemplateContext struct {
+	Event *event.Event
+	Fields map[string]interface{}
 }
-func (formatter *TextFormatter) FormatLevel(logEvent *event.Event) string {
-	var levelName string
-	if formatter.UseColor {
-		var levelColor []byte
-		if logEvent.Level <= event.Error {
-			levelColor = colors.Red
-		} else if logEvent.Level == event.Warning {
-			levelColor = colors.Yellow
-		} else {
-			levelColor = colors.Blue
-		}
-		levelName = fmt.Sprintf("%s%s%s", levelColor, logEvent.LevelName(), colors.Reset)
+func (tc *TemplateContext) Time(format string) string {
+	return tc.Event.Timestamp.Format(format)
+}
+func (tc *TemplateContext) Level() string {
+	return tc.Event.LevelName()
+}
+func (tc *TemplateContext) Color(text string) string {
+	var levelColor []byte
+	if tc.Event.Level <= event.Error {
+		levelColor = colors.Red
+	} else if tc.Event.Level == event.Warning {
+		levelColor = colors.Yellow
 	} else {
-		levelName = logEvent.LevelName()
+		levelColor = colors.Blue
 	}
-
-	padding := []byte{}
-	if formatter.DoAlignment {
-		for i := len(logEvent.LevelName()); i < len(event.LevelName(event.Emergency)); i++ {
-			padding = append(padding, ' ')
-		}
-	}
-
-	return fmt.Sprintf("%s%s", levelName, padding)
+	return fmt.Sprintf("%s%s%s", levelColor, text, colors.Reset)
 }
-func (formatter *TextFormatter) FormatMessage(logEvent *event.Event) string {
-	if formatter.DoAlignment {
-		return fmt.Sprintf("%-30s", logEvent.Message)
-	}
-		return logEvent.Message
+func (tc *TemplateContext) Pad(size int, text string) string {
+	return text //TODO
 }
-func (formatter *TextFormatter) FormatFields(logEvent *event.Event) string {
-  flatFields := flatten(logEvent.Fields)
-
-  keys := make([]string, len(flatFields))
-  i := 0
-  for k := range flatFields {
-    keys[i] = k
-    i += 1
-  }
-  sort.Strings(keys)
-
-	buf := []byte{}
-
-  for _, k := range keys {
-		if len(buf) > 0 {
-			buf = append(buf, ' ')
-		}
-    v := flatFields[k]
-
-		if formatter.UseColor {
-			k = fmt.Sprintf("%s%s%s", colors.Cyan, k, colors.Reset)
-		}
-    buf = append(buf, []byte(fmt.Sprintf("%s=%v", k, v))...)
-  }
-
-  return string(buf)
+func (tc *TemplateContext) Message() string {
+	return tc.Event.Message
 }
 
 func flatten(fields interface{}) (map[string]interface{}) {

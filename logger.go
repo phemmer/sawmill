@@ -33,8 +33,20 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 }
 
 func (logger *Logger) InitStdStreams() {
-	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, formatter.NewTextFormatter(formatter.IsTerminal(os.Stdout))), Debug, Notice)
-	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, formatter.NewTextFormatter(formatter.IsTerminal(os.Stderr))), Warning, Emergency)
+	var stdoutFormatter, stderrFormatter formatter.Formatter
+	if formatter.IsTerminal(os.Stdout) {
+		stdoutFormatter = formatter.NewTextFormatter(formatter.CONSOLE_COLOR_FORMAT)
+	} else {
+		stdoutFormatter = formatter.NewTextFormatter(formatter.CONSOLE_NOCOLOR_FORMAT)
+	}
+	if formatter.IsTerminal(os.Stderr) {
+		stderrFormatter = formatter.NewTextFormatter(formatter.CONSOLE_COLOR_FORMAT)
+	} else {
+		stderrFormatter = formatter.NewTextFormatter(formatter.CONSOLE_NOCOLOR_FORMAT)
+	}
+
+	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, stdoutFormatter), Debug, Notice)
+	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, stderrFormatter), Warning, Emergency)
 }
 func (logger *Logger) InitStdSyslog() (error) {
 	syslogHook, err := syslog.New("", "", 0, nil)

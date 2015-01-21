@@ -72,10 +72,7 @@ func New(protocol string, addr string, facility int, eventFormatter formatter.Fo
   }
 
   if eventFormatter == nil {
-    textFormatter := formatter.NewTextFormatter(false)
-    textFormatter.DoAlignment = false
-    textFormatter.TimeFormat = ""
-    eventFormatter = textFormatter
+    eventFormatter = formatter.NewTextFormatter(formatter.SIMPLE_FORMAT)
   }
 
   hostname, _ := os.Hostname()
@@ -152,17 +149,15 @@ func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) (error) 
   }
 
   _, err := sw.syslogConnection.Write(data)
-  if err != nil {
-    err = sw.Dial()
-    if err != nil {
-      return err
-    }
+  if err == nil { // write success
+    return nil
+  }
+
+  err = sw.Dial()
+  if err != nil { // re-dial failed
+    return err
   }
 
   _, err = sw.syslogConnection.Write(data)
-  if err != nil {
-    err = sw.Dial()
-  }
-
   return err
 }

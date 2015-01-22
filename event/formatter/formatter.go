@@ -3,6 +3,7 @@ package formatter
 import (
   "github.com/phemmer/sawmill/event"
   "fmt"
+  "strings"
 )
 
 type ansiColorCodes struct {
@@ -35,8 +36,8 @@ var colors = ansiColorCodes{
 
 const (
 	SIMPLE_FORMAT = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
-	CONSOLE_COLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -9}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
-	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -9}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
+	CONSOLE_COLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
+	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
 )
 
 type Formatter struct {
@@ -62,8 +63,38 @@ func (formatter *Formatter) Color(text string) string {
 	}
 	return fmt.Sprintf("%s%s%s", levelColor, text, colors.Reset)
 }
+
+/*
+This pads the provided text to the specified length, while properly handling the color escape codes.
+Like the `%-10s` format, negative values mean pad on the right, where as positive values mean pad on the left.
+*/
 func (formatter *Formatter) Pad(size int, text string) string {
-	return text //TODO
+  pos := 0
+  colorLen := 0
+  for index := strings.Index(text[pos:], "["); index != -1; index = strings.Index(text[pos:], "[") {
+    pos = pos + index
+    index = strings.Index(text[pos:], "m")
+    if index == -1 {
+      break
+    }
+    colorLen = colorLen + index + 1 // + 1 because 'index' is effectively the number of characters before 'm', where we want length including 'm'
+    pos = pos + index + 1
+  }
+  textLen := len(text) - colorLen
+
+  if size < 0 {
+    padLen := -size - textLen
+    if padLen > 0 {
+      return fmt.Sprintf("%s%s", text, strings.Repeat(" ", padLen))
+    }
+  } else {
+    padLen := size - textLen
+    if padLen > 0 {
+      return fmt.Sprintf("%s%s", strings.Repeat(" ", padLen), text)
+    }
+  }
+
+	return text
 }
 func (formatter *Formatter) Message() string {
 	return formatter.Event.Message

@@ -2,12 +2,14 @@ package syslog
 
 import (
   "github.com/phemmer/sawmill/event"
-  "github.com/phemmer/sawmill/formatter"
+  "github.com/phemmer/sawmill/event/formatter"
+	"text/template"
   "os"
   "path"
   "net"
   "fmt"
   "time"
+  "bytes"
 )
 
 const (
@@ -61,19 +63,24 @@ type SyslogWriter struct {
   syslogHostname string
   syslogFacility int
   syslogTag string
-  Formatter formatter.Formatter
+  Template *template.Template
 }
 
-func New(protocol string, addr string, facility int, eventFormatter formatter.Formatter) (*SyslogWriter, error) {
+func New(protocol string, addr string, facility int, templateString string) (*SyslogWriter, error) {
   tag := path.Base(os.Args[0])
 
   if facility == 0 {
     facility = USER
   }
 
-  if eventFormatter == nil {
-    eventFormatter = formatter.NewTextFormatter(formatter.SIMPLE_FORMAT)
-  }
+	if templateString == "" {
+		templateString = formatter.SIMPLE_FORMAT
+	}
+	formatterTemplate, err := template.New("").Parse(templateString)
+	if err != nil {
+		fmt.Printf("Error parsing template: %s", err) //TODO send message somewhere else?
+		return nil, err
+	}
 
   hostname, _ := os.Hostname()
 
@@ -83,10 +90,10 @@ func New(protocol string, addr string, facility int, eventFormatter formatter.Fo
     syslogHostname: hostname,
     syslogFacility: facility,
     syslogTag: tag,
-    Formatter: eventFormatter,
+    Template: formatterTemplate,
   }
 
-  err := sw.Dial()
+  err = sw.Dial()
   if err != nil {
     return nil, err
   }
@@ -131,11 +138,13 @@ func (sw *SyslogWriter) Dial() (error) {
 }
 
 func (sw *SyslogWriter) Event(logEvent *event.Event) (error) {
-  return sw.sendMessage(logEvent, sw.Formatter.Format(logEvent))
+	var templateBuffer bytes.Buffer
+	sw.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+  return sw.sendMessage(logEvent, templateBuffer.Bytes())
 }
 func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) (error) {
   priority := sw.syslogFacility | levelPriorityMap[event.Level]
-  timestamp := event.Timestamp.Format(time.StampMilli) // this is the BSD syslog format. IETF syslog format is better, but is still relatively new.
+  timestamp := event.Time.Format(time.StampMilli) // this is the BSD syslog format. IETF syslog format is better, but is still relatively new.
   tag := sw.syslogTag
   pid := os.Getpid()
 

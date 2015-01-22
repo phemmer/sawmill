@@ -3,9 +3,9 @@ package sawmill
 import (
 	"time"
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/event/formatter"
 	"github.com/phemmer/sawmill/hook"
 	"github.com/phemmer/sawmill/hook/syslog"
-	"github.com/phemmer/sawmill/formatter"
 	"os"
 	"reflect"
 )
@@ -33,23 +33,25 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 }
 
 func (logger *Logger) InitStdStreams() {
-	var stdoutFormatter, stderrFormatter formatter.Formatter
-	if formatter.IsTerminal(os.Stdout) {
-		stdoutFormatter = formatter.NewTextFormatter(formatter.CONSOLE_COLOR_FORMAT)
+	var stdoutFormat, stderrFormat string
+	if hook.IsTerminal(os.Stdout) {
+		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
-		stdoutFormatter = formatter.NewTextFormatter(formatter.CONSOLE_NOCOLOR_FORMAT)
+		stdoutFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
-	if formatter.IsTerminal(os.Stderr) {
-		stderrFormatter = formatter.NewTextFormatter(formatter.CONSOLE_COLOR_FORMAT)
+	if hook.IsTerminal(os.Stderr) {
+		stderrFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
-		stderrFormatter = formatter.NewTextFormatter(formatter.CONSOLE_NOCOLOR_FORMAT)
+		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
 
-	logger.AddHook("stdout", hook.NewHookIOWriter(os.Stdout, stdoutFormatter), Debug, Notice)
-	logger.AddHook("stderr", hook.NewHookIOWriter(os.Stderr, stderrFormatter), Warning, Emergency)
+	stdoutHook, _ := hook.NewHookIOWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
+	logger.AddHook("stdout", stdoutHook, Debug, Notice)
+	stderrHook, _ := hook.NewHookIOWriter(os.Stdout, stderrFormat)
+	logger.AddHook("stderr", stderrHook, Warning, Emergency)
 }
 func (logger *Logger) InitStdSyslog() (error) {
-	syslogHook, err := syslog.New("", "", 0, nil)
+	syslogHook, err := syslog.New("", "", 0, "")
 	if err != nil {
 		return err
 	}
@@ -61,7 +63,7 @@ func (logger *Logger) InitStdSyslog() (error) {
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
 	fieldsCopy := deStruct(fields)
 	logEvent := &event.Event{
-		Timestamp: time.Now(),
+		Time: time.Now(),
 		Level: level,
 		Message: message,
 		Fields: fieldsCopy,

@@ -1,4 +1,4 @@
-package hook
+package handler
 
 import (
   "github.com/phemmer/sawmill/event"
@@ -10,7 +10,7 @@ import (
 	"fmt"
 )
 
-type Hook interface {
+type Handler interface {
 	Event(event *event.Event) error
 }
 
@@ -18,11 +18,11 @@ func IsTerminal(stream interface{Fd() uintptr}) bool {
   return terminal.IsTerminal(int(stream.Fd()))
 }
 
-type HookIOWriter struct {
+type EventIOWriter struct {
 	Output io.Writer
 	Template *template.Template
 }
-func NewHookIOWriter (output io.Writer, templateString string) (*HookIOWriter, error) {
+func NewEventIOWriter (output io.Writer, templateString string) (*EventIOWriter, error) {
 	if templateString == "" {
 		templateString = formatter.SIMPLE_FORMAT
 	}
@@ -31,18 +31,18 @@ func NewHookIOWriter (output io.Writer, templateString string) (*HookIOWriter, e
 		fmt.Printf("Error parsing template: %s", err) //TODO send message somewhere else?
 		return nil, err
 	}
-	hook := &HookIOWriter{
+	ewriter := &EventIOWriter{
 		Output: output,
 		Template: formatterTemplate,
 	}
-	return hook, nil
+	return ewriter, nil
 }
-func (hook *HookIOWriter) Event(logEvent *event.Event) (error) {
-	//hook.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
+func (ewriter *EventIOWriter) Event(logEvent *event.Event) (error) {
+	//ewriter.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer
-	hook.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+	ewriter.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
 	templateBuffer.WriteByte('\n')
-	hook.Output.Write(templateBuffer.Bytes())
+	ewriter.Output.Write(templateBuffer.Bytes())
 
 	return nil
 }

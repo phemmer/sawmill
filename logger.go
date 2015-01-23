@@ -4,8 +4,8 @@ import (
 	"time"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
-	"github.com/phemmer/sawmill/hook"
-	"github.com/phemmer/sawmill/hook/syslog"
+	"github.com/phemmer/sawmill/handler"
+	"github.com/phemmer/sawmill/handler/syslog"
 	"os"
 	"reflect"
 	"fmt"
@@ -14,27 +14,27 @@ import (
 
 type Fields map[string]interface{}
 
-type hookTableEntry struct {
+type handlerTableEntry struct {
 	name string
 	levelMin, levelMax event.Level
 	eventChannel chan *event.Event
 	finishChannel chan bool
 }
 type Logger struct {
-	hookTable map[string]*hookTableEntry
+	handlerTable map[string]*handlerTableEntry
 	waitgroup sync.WaitGroup
 }
 
 func NewLogger() (*Logger) {
 	return &Logger{
-		hookTable: make(map[string]*hookTableEntry),
+		handlerTable: make(map[string]*handlerTableEntry),
 	}
 }
 
-func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level, levelMax event.Level) {
+func (logger *Logger) AddHandler(name string, eventHandler handler.Handler, levelMin event.Level, levelMax event.Level) {
 	//TODO lock
 	//TODO check name collision
-	hookTableEntry := &hookTableEntry{
+	handlerTableEntry := &handlerTableEntry{
 		name: name,
 		levelMin: levelMin,
 		levelMax: levelMax,
@@ -52,54 +52,54 @@ func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level,
 			callback(logEvent) //TODO error handler
 		}
 		finishChannel <- true
-	}(hookTableEntry.eventChannel, hook.Event, &logger.waitgroup, hookTableEntry.finishChannel)
+	}(handlerTableEntry.eventChannel, eventHandler.Event, &logger.waitgroup, handlerTableEntry.finishChannel)
 
-	logger.hookTable[name] = hookTableEntry
+	logger.handlerTable[name] = handlerTableEntry
 }
-func (logger *Logger) RemoveHook(name string, wait bool) {
-	hookTableEntry := logger.hookTable[name]
-	if hookTableEntry == nil {
+func (logger *Logger) RemoveHandler(name string, wait bool) {
+	handlerTableEntry := logger.handlerTable[name]
+	if handlerTableEntry == nil {
 		// doesn't exist
 		return
 	}
-	delete(logger.hookTable, name)
-	hookTableEntry.eventChannel <- nil
+	delete(logger.handlerTable, name)
+	handlerTableEntry.eventChannel <- nil
 	if !wait {
 		return
 	}
-	<-hookTableEntry.finishChannel
+	<-handlerTableEntry.finishChannel
 }
 func (logger *Logger) Stop() {
-	for hookName, _ := range logger.hookTable {
-		logger.RemoveHook(hookName, false)
+	for handlerName, _ := range logger.handlerTable {
+		logger.RemoveHandler(handlerName, false)
 	}
 	logger.waitgroup.Wait() //TODO timeout?
 }
 
 func (logger *Logger) InitStdStreams() {
 	var stdoutFormat, stderrFormat string
-	if hook.IsTerminal(os.Stdout) {
+	if handler.IsTerminal(os.Stdout) {
 		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
 		stdoutFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
-	if hook.IsTerminal(os.Stderr) {
+	if handler.IsTerminal(os.Stderr) {
 		stderrFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
 		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
 
-	stdoutHook, _ := hook.NewHookIOWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
-	logger.AddHook("stdout", stdoutHook, Debug, Notice)
-	stderrHook, _ := hook.NewHookIOWriter(os.Stdout, stderrFormat)
-	logger.AddHook("stderr", stderrHook, Warning, Emergency)
+	stdoutHandler, _ := handler.NewEventIOWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
+	logger.AddHandler("stdout", stdoutHandler, Debug, Notice)
+	stderrHandler, _ := handler.NewEventIOWriter(os.Stdout, stderrFormat)
+	logger.AddHandler("stderr", stderrHandler, Warning, Emergency)
 }
 func (logger *Logger) InitStdSyslog() (error) {
-	syslogHook, err := syslog.New("", "", 0, "")
+	syslogHandler, err := syslog.New("", "", 0, "")
 	if err != nil {
 		return err
 	}
-	logger.AddHook("syslog", syslogHook, Debug, Emergency)
+	logger.AddHandler("syslog", syslogHandler, Debug, Emergency)
 
 	return nil
 }
@@ -113,15 +113,15 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		Fields: fieldsCopy,
 	}
 	//TODO lock table, copy it, release lock, iterate over copy
-	for _, hookTableEntry := range logger.hookTable {
-		if level > hookTableEntry.levelMin || level < hookTableEntry.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
+	for _, handlerTableEntry := range logger.handlerTable {
+		if level > handlerTableEntry.levelMin || level < handlerTableEntry.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
 			continue
 		}
 		select {
-		case hookTableEntry.eventChannel <- logEvent:
+		case handlerTableEntry.eventChannel <- logEvent:
 		default:
-			fmt.Fprintf(os.Stderr, "Unable to send event to hook. Buffer full. hook=%s\n", hookTableEntry.name)
-			//TODO generate an event for this, but put in a time-last-dropped so we don't send the message to the hook which is dropping
+			fmt.Fprintf(os.Stderr, "Unable to send event to handler. Buffer full. handler=%s\n", handlerTableEntry.name)
+			//TODO generate an event for this, but put in a time-last-dropped so we don't send the message to the handler which is dropping
 			// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
 		}
 	}

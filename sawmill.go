@@ -17,9 +17,6 @@ const (
 )
 
 var logger *Logger
-func NewLogger() (*Logger) {
-	return &Logger{}
-}
 func Event(level event.Level, message string, fields interface{}) {
 	if logger == nil {
 		logger = NewLogger()

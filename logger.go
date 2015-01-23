@@ -8,6 +8,8 @@ import (
 	"github.com/phemmer/sawmill/hook/syslog"
 	"os"
 	"reflect"
+	"fmt"
+	"sync"
 )
 
 type Fields map[string]interface{}
@@ -15,21 +17,63 @@ type Fields map[string]interface{}
 type hookTableEntry struct {
 	name string
 	levelMin, levelMax event.Level
-	hook hook.Hook
+	eventChannel chan *event.Event
+	finishChannel chan bool
 }
 type Logger struct {
-	hookTable []*hookTableEntry
+	hookTable map[string]*hookTableEntry
+	waitgroup sync.WaitGroup
+}
+
+func NewLogger() (*Logger) {
+	return &Logger{
+		hookTable: make(map[string]*hookTableEntry),
+	}
 }
 
 func (logger *Logger) AddHook(name string, hook hook.Hook, levelMin event.Level, levelMax event.Level) {
 	//TODO lock
 	//TODO check name collision
-	logger.hookTable = append(logger.hookTable, &hookTableEntry{
+	hookTableEntry := &hookTableEntry{
 		name: name,
-		hook: hook,
 		levelMin: levelMin,
 		levelMax: levelMax,
-	})
+		eventChannel: make(chan *event.Event, 100),
+		finishChannel: make(chan bool, 1),
+	}
+
+	logger.waitgroup.Add(1)
+	go func(eventChannel chan *event.Event, callback func(*event.Event) error, waitgroup *sync.WaitGroup, finishChannel chan bool) {
+		defer waitgroup.Done()
+		for logEvent := range eventChannel {
+			if logEvent == nil {
+				break
+			}
+			callback(logEvent) //TODO error handler
+		}
+		finishChannel <- true
+	}(hookTableEntry.eventChannel, hook.Event, &logger.waitgroup, hookTableEntry.finishChannel)
+
+	logger.hookTable[name] = hookTableEntry
+}
+func (logger *Logger) RemoveHook(name string, wait bool) {
+	hookTableEntry := logger.hookTable[name]
+	if hookTableEntry == nil {
+		// doesn't exist
+		return
+	}
+	delete(logger.hookTable, name)
+	hookTableEntry.eventChannel <- nil
+	if !wait {
+		return
+	}
+	<-hookTableEntry.finishChannel
+}
+func (logger *Logger) Stop() {
+	for hookName, _ := range logger.hookTable {
+		logger.RemoveHook(hookName, false)
+	}
+	logger.waitgroup.Wait() //TODO timeout?
 }
 
 func (logger *Logger) InitStdStreams() {
@@ -73,7 +117,13 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		if level > hookTableEntry.levelMin || level < hookTableEntry.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
 			continue
 		}
-		hookTableEntry.hook.Event(logEvent)
+		select {
+		case hookTableEntry.eventChannel <- logEvent:
+		default:
+			fmt.Fprintf(os.Stderr, "Unable to send event to hook. Buffer full. hook=%s\n", hookTableEntry.name)
+			//TODO generate an event for this, but put in a time-last-dropped so we don't send the message to the hook which is dropping
+			// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
+		}
 	}
 }
 

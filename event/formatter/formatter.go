@@ -1,14 +1,15 @@
 package formatter
 
 import (
-  "github.com/phemmer/sawmill/event"
-  "fmt"
-  "strings"
+	"fmt"
+	"github.com/phemmer/sawmill/event"
+	"strings"
 )
 
 type ansiColorCodes struct {
 	Bold, Normal, Black, BlackBold, Red, RedBold, Green, GreenBold, Yellow, YellowBold, Blue, BlueBold, Magenta, MagentaBold, Cyan, CyanBold, White, WhiteBold, Underline, Reset []byte
 }
+
 var colors = ansiColorCodes{
 	Bold:        []byte{27, '[', '1', 'm'},
 	Normal:      []byte{27, '[', '2', '2', 'm'},
@@ -29,22 +30,23 @@ var colors = ansiColorCodes{
 	White:       []byte{27, '[', '3', '7', 'm'},
 	WhiteBold:   []byte{27, '[', '3', '7', ';', '1', 'm'},
 
-	Underline:   []byte{27, '[', '4', 'm'},
+	Underline: []byte{27, '[', '4', 'm'},
 
-	Reset:   []byte{27, '[', '0', 'm'},
+	Reset: []byte{27, '[', '0', 'm'},
 }
 
 const (
-	SIMPLE_FORMAT = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
-	CONSOLE_COLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
+	SIMPLE_FORMAT          = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
+	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
 	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
 )
 
 type Formatter struct {
 	Event *event.Event
 }
-func EventFormatter(logEvent *event.Event) (*Formatter) {
-  return &Formatter{Event: logEvent}
+
+func EventFormatter(logEvent *event.Event) *Formatter {
+	return &Formatter{Event: logEvent}
 }
 func (formatter *Formatter) Time(format string) string {
 	return formatter.Event.Time.Format(format)
@@ -69,30 +71,30 @@ This pads the provided text to the specified length, while properly handling the
 Like the `%-10s` format, negative values mean pad on the right, where as positive values mean pad on the left.
 */
 func (formatter *Formatter) Pad(size int, text string) string {
-  pos := 0
-  colorLen := 0
-  for index := strings.Index(text[pos:], "["); index != -1; index = strings.Index(text[pos:], "[") {
-    pos = pos + index
-    index = strings.Index(text[pos:], "m")
-    if index == -1 {
-      break
-    }
-    colorLen = colorLen + index + 1 // + 1 because 'index' is effectively the number of characters before 'm', where we want length including 'm'
-    pos = pos + index + 1
-  }
-  textLen := len(text) - colorLen
+	pos := 0
+	colorLen := 0
+	for index := strings.Index(text[pos:], "["); index != -1; index = strings.Index(text[pos:], "[") {
+		pos = pos + index
+		index = strings.Index(text[pos:], "m")
+		if index == -1 {
+			break
+		}
+		colorLen = colorLen + index + 1 // + 1 because 'index' is effectively the number of characters before 'm', where we want length including 'm'
+		pos = pos + index + 1
+	}
+	textLen := len(text) - colorLen
 
-  if size < 0 {
-    padLen := -size - textLen
-    if padLen > 0 {
-      return fmt.Sprintf("%s%s", text, strings.Repeat(" ", padLen))
-    }
-  } else {
-    padLen := size - textLen
-    if padLen > 0 {
-      return fmt.Sprintf("%s%s", strings.Repeat(" ", padLen), text)
-    }
-  }
+	if size < 0 {
+		padLen := -size - textLen
+		if padLen > 0 {
+			return fmt.Sprintf("%s%s", text, strings.Repeat(" ", padLen))
+		}
+	} else {
+		padLen := size - textLen
+		if padLen > 0 {
+			return fmt.Sprintf("%s%s", strings.Repeat(" ", padLen), text)
+		}
+	}
 
 	return text
 }

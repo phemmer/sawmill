@@ -1,12 +1,13 @@
 package event
 
 import (
-  "time"
-	"reflect"
 	"fmt"
+	"reflect"
+	"time"
 )
 
 type Level int
+
 const (
 	Emergency, Emerg Level = iota, iota
 	Alert, Alrt
@@ -17,6 +18,7 @@ const (
 	Info, _
 	Debug, Dbg
 )
+
 var LevelNames = [8]string{
 	"Emergency",
 	"Alert",
@@ -27,63 +29,64 @@ var LevelNames = [8]string{
 	"Info",
 	"Debug",
 }
+
 func LevelName(level Level) string {
 	return LevelNames[level]
 }
 
 type Event struct {
-	Level Level
-	Time time.Time
-	Message string
-	Fields interface{}
-  FlatFields map[string]interface{}
+	Level      Level
+	Time       time.Time
+	Message    string
+	Fields     interface{}
+	FlatFields map[string]interface{}
 }
 
 func NewEvent(level Level, message string, data interface{}) *Event {
-  now := time.Now()
+	now := time.Now()
 
-  flatFields := map[string]interface{}{}
-  fields := deStruct(data, "", flatFields)
+	flatFields := map[string]interface{}{}
+	fields := deStruct(data, "", flatFields)
 
-  event := &Event{
-    Time: now,
-    Level: level,
-    Message: message,
-    Fields: fields,
-    FlatFields: flatFields,
-  }
+	event := &Event{
+		Time:       now,
+		Level:      level,
+		Message:    message,
+		Fields:     fields,
+		FlatFields: flatFields,
+	}
 
-  return event
+	return event
 }
 
 func (event *Event) LevelName() string {
 	return LevelName(event.Level)
 }
 
-func deStruct(data interface{}, parent string, flatFields map[string]interface{}) (interface{}) {
+func deStruct(data interface{}, parent string, flatFields map[string]interface{}) interface{} {
 	dataValue := reflect.ValueOf(data)
 	for dataValue.Kind() == reflect.Ptr {
 		dataValue = dataValue.Elem()
 	}
 
-  kind := dataValue.Kind()
+	kind := dataValue.Kind()
 
 	if kind == reflect.Struct {
 		newData := make(map[string]interface{})
 		structType := reflect.TypeOf(dataValue.Interface())
 		for i := 0; i < dataValue.NumField(); i++ {
 			subDataValue := dataValue.Field(i)
-			if ! subDataValue.CanInterface() { // skip if it's unexported
+			if !subDataValue.CanInterface() { // skip if it's unexported
 				continue
 			}
 			key := structType.Field(i).Name
 
-      var keyFlat string
-      if parent == "" {
-        keyFlat = key
-      } else {
-        keyFlat = fmt.Sprintf("%s.%s", parent, key)
-      }
+			var keyFlat string
+			if parent == "" {
+				keyFlat = key
+			} else {
+				keyFlat = fmt.Sprintf("%s.%s", parent, key)
+			}
 
 			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
 		}
@@ -94,12 +97,12 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 			subDataValue := dataValue.MapIndex(keyValue)
 			key := deStruct(keyValue.Interface(), "", nil)
 
-      var keyFlat string
-      if parent == "" {
-        keyFlat = fmt.Sprintf("%v", key)
-      } else {
-        keyFlat = fmt.Sprintf("%s.%v", parent, key)
-      }
+			var keyFlat string
+			if parent == "" {
+				keyFlat = fmt.Sprintf("%v", key)
+			} else {
+				keyFlat = fmt.Sprintf("%s.%v", parent, key)
+			}
 
 			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
 		}
@@ -107,26 +110,26 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 	} else if dataValue.Kind() == reflect.Array || dataValue.Kind() == reflect.Slice {
 		var newData []interface{}
 
-    for i := 0; i < dataValue.Len(); i++ {
-      subData := dataValue.Index(i).Interface()
-      var keyFlat string
-      if parent == "" {
-        keyFlat = fmt.Sprintf("%d", i)
-      } else {
-        keyFlat = fmt.Sprintf("%s.%d", parent, i)
-      }
+		for i := 0; i < dataValue.Len(); i++ {
+			subData := dataValue.Index(i).Interface()
+			var keyFlat string
+			if parent == "" {
+				keyFlat = fmt.Sprintf("%d", i)
+			} else {
+				keyFlat = fmt.Sprintf("%s.%d", parent, i)
+			}
 
-      subData = deStruct(subData, keyFlat, flatFields)
+			subData = deStruct(subData, keyFlat, flatFields)
 			newData = append(newData, subData)
 		}
 		return newData
 	}
 	// scalar
-  if flatFields != nil {
-    if parent == "" {
-      parent = "."
-    }
-    flatFields[parent] = dataValue.Interface()
-  }
+	if flatFields != nil {
+		if parent == "" {
+			parent = "."
+		}
+		flatFields[parent] = dataValue.Interface()
+	}
 	return dataValue.Interface()
 }

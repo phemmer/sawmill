@@ -7,13 +7,13 @@ import (
 // these are copied here for convenience
 const (
 	Emergency, Emerg = event.Emergency, event.Emerg
-	Alert, Alrt = event.Alert, event.Alrt
-	Critical, Crit = event.Critical, event.Crit
-	Error, Err = event.Error, event.Err
-	Warning, Warn = event.Warning, event.Warn
-	Notice = event.Notice
-	Info = event.Info
-	Debug, Dbg = event.Debug, event.Debug
+	Alert, Alrt      = event.Alert, event.Alrt
+	Critical, Crit   = event.Critical, event.Crit
+	Error, Err       = event.Error, event.Err
+	Warning, Warn    = event.Warning, event.Warn
+	Notice           = event.Notice
+	Info             = event.Info
+	Debug, Dbg       = event.Debug, event.Debug
 )
 
 var logger *Logger
@@ -26,7 +26,7 @@ func Event(level event.Level, message string, fields interface{}) {
 	logger.Event(level, message, fields)
 }
 
-func DefaultLogger() (*Logger) {
+func DefaultLogger() *Logger {
 	if logger == nil {
 		logger = NewLogger()
 		logger.InitStdStreams()

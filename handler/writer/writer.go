@@ -1,24 +1,26 @@
 package writer
 
 import (
-  "github.com/phemmer/sawmill/event"
-  "github.com/phemmer/sawmill/event/formatter"
-	"golang.org/x/crypto/ssh/terminal"
-	"text/template"
-  "io"
 	"bytes"
 	"fmt"
+	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/event/formatter"
+	"golang.org/x/crypto/ssh/terminal"
+	"io"
+	"text/template"
 )
 
-
-func IsTerminal(stream interface{Fd() uintptr}) bool {
-  return terminal.IsTerminal(int(stream.Fd()))
+func IsTerminal(stream interface {
+	Fd() uintptr
+}) bool {
+	return terminal.IsTerminal(int(stream.Fd()))
 }
 
 type EventWriter struct {
-	Output io.Writer
+	Output   io.Writer
 	Template *template.Template
 }
+
 func NewEventWriter(output io.Writer, templateString string) (*EventWriter, error) {
 	if templateString == "" {
 		templateString = formatter.SIMPLE_FORMAT
@@ -29,12 +31,12 @@ func NewEventWriter(output io.Writer, templateString string) (*EventWriter, erro
 		return nil, err
 	}
 	ewriter := &EventWriter{
-		Output: output,
+		Output:   output,
 		Template: formatterTemplate,
 	}
 	return ewriter, nil
 }
-func (ewriter *EventWriter) Event(logEvent *event.Event) (error) {
+func (ewriter *EventWriter) Event(logEvent *event.Event) error {
 	//ewriter.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer
 	ewriter.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))

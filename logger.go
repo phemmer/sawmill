@@ -1,12 +1,12 @@
 package sawmill
 
 import (
+	"fmt"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
-	"github.com/phemmer/sawmill/handler/writer"
 	"github.com/phemmer/sawmill/handler/syslog"
+	"github.com/phemmer/sawmill/handler/writer"
 	"os"
-	"fmt"
 	"sync"
 )
 
@@ -17,18 +17,18 @@ type Handler interface {
 }
 
 type eventHandlerSpec struct {
-	name string
+	name               string
 	levelMin, levelMax event.Level
-	eventChannel chan *event.Event
-	finishChannel chan bool
+	eventChannel       chan *event.Event
+	finishChannel      chan bool
 }
 
 type Logger struct {
 	eventHandlerMap map[string]*eventHandlerSpec
-	waitgroup sync.WaitGroup
+	waitgroup       sync.WaitGroup
 }
 
-func NewLogger() (*Logger) {
+func NewLogger() *Logger {
 	return &Logger{
 		eventHandlerMap: make(map[string]*eventHandlerSpec),
 	}
@@ -38,10 +38,10 @@ func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin eve
 	//TODO lock
 	//TODO check name collision
 	eventHandlerSpec := &eventHandlerSpec{
-		name: name,
-		levelMin: levelMin,
-		levelMax: levelMax,
-		eventChannel: make(chan *event.Event, 100),
+		name:          name,
+		levelMin:      levelMin,
+		levelMax:      levelMax,
+		eventChannel:  make(chan *event.Event, 100),
 		finishChannel: make(chan bool, 1),
 	}
 
@@ -99,7 +99,7 @@ func (logger *Logger) InitStdStreams() {
 	stderrHandler, _ := writer.NewEventWriter(os.Stdout, stderrFormat)
 	logger.AddHandler("stderr", stderrHandler, Warning, Emergency)
 }
-func (logger *Logger) InitStdSyslog() (error) {
+func (logger *Logger) InitStdSyslog() error {
 	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
 	if err != nil {
 		return err

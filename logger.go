@@ -1,13 +1,11 @@
 package sawmill
 
 import (
-	"time"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
 	"github.com/phemmer/sawmill/handler"
 	"github.com/phemmer/sawmill/handler/syslog"
 	"os"
-	"reflect"
 	"fmt"
 	"sync"
 )
@@ -105,13 +103,7 @@ func (logger *Logger) InitStdSyslog() (error) {
 }
 
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
-	fieldsCopy := deStruct(fields)
-	logEvent := &event.Event{
-		Time: time.Now(),
-		Level: level,
-		Message: message,
-		Fields: fieldsCopy,
-	}
+	logEvent := event.NewEvent(level, message, fields)
 	//TODO lock table, copy it, release lock, iterate over copy
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
 		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
@@ -125,43 +117,4 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 			// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
 		}
 	}
-}
-
-
-
-func deStruct(obj interface{}) (interface{}) {
-	value := reflect.ValueOf(obj)
-	for value.Kind() == reflect.Ptr {
-		value = value.Elem()
-	}
-
-	if value.Kind() == reflect.Struct {
-		result := make(map[string]interface{})
-		structType := reflect.TypeOf(value.Interface())
-		for i := 0; i < value.NumField(); i++ {
-			field := value.Field(i)
-			if ! field.CanInterface() { // skip if it's unexported
-				continue
-			}
-			k := structType.Field(i).Name
-			result[k] = deStruct(field.Interface())
-		}
-		return result
-	} else if value.Kind() == reflect.Map {
-		result := make(map[interface{}]interface{})
-		for _, kValue := range value.MapKeys() {
-			vValue := value.MapIndex(kValue)
-			k := kValue.Interface()
-			result[deStruct(k)] = deStruct(vValue.Interface())
-		}
-		return result
-	} else if value.Kind() == reflect.Array || value.Kind() == reflect.Slice {
-		var result []interface{}
-		for v := range value.Interface().([]interface{}) {
-			result = append(result, deStruct(v))
-		}
-		return result
-	}
-	// scalar
-	return value.Interface()
 }

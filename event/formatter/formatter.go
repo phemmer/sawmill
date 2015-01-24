@@ -100,5 +100,5 @@ func (formatter *Formatter) Message() string {
 	return formatter.Event.Message
 }
 func (formatter *Formatter) Fields() map[string]interface{} {
-	return formatter.Event.FlatFields()
+	return formatter.Event.FlatFields
 }

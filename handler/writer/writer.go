@@ -1,4 +1,4 @@
-package handler
+package writer
 
 import (
   "github.com/phemmer/sawmill/event"
@@ -10,19 +10,16 @@ import (
 	"fmt"
 )
 
-type Handler interface {
-	Event(event *event.Event) error
-}
 
 func IsTerminal(stream interface{Fd() uintptr}) bool {
   return terminal.IsTerminal(int(stream.Fd()))
 }
 
-type EventIOWriter struct {
+type EventWriter struct {
 	Output io.Writer
 	Template *template.Template
 }
-func NewEventIOWriter (output io.Writer, templateString string) (*EventIOWriter, error) {
+func NewEventWriter(output io.Writer, templateString string) (*EventWriter, error) {
 	if templateString == "" {
 		templateString = formatter.SIMPLE_FORMAT
 	}
@@ -31,13 +28,13 @@ func NewEventIOWriter (output io.Writer, templateString string) (*EventIOWriter,
 		fmt.Printf("Error parsing template: %s", err) //TODO send message somewhere else?
 		return nil, err
 	}
-	ewriter := &EventIOWriter{
+	ewriter := &EventWriter{
 		Output: output,
 		Template: formatterTemplate,
 	}
 	return ewriter, nil
 }
-func (ewriter *EventIOWriter) Event(logEvent *event.Event) (error) {
+func (ewriter *EventWriter) Event(logEvent *event.Event) (error) {
 	//ewriter.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer
 	ewriter.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))

@@ -66,7 +66,7 @@ type SyslogWriter struct {
   Template *template.Template
 }
 
-func New(protocol string, addr string, facility int, templateString string) (*SyslogWriter, error) {
+func NewSyslogWriter(protocol string, addr string, facility int, templateString string) (*SyslogWriter, error) {
   tag := path.Base(os.Args[0])
 
   if facility == 0 {

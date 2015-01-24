@@ -3,7 +3,7 @@ package sawmill
 import (
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
-	"github.com/phemmer/sawmill/handler"
+	"github.com/phemmer/sawmill/handler/writer"
 	"github.com/phemmer/sawmill/handler/syslog"
 	"os"
 	"fmt"
@@ -11,6 +11,10 @@ import (
 )
 
 type Fields map[string]interface{}
+
+type Handler interface {
+	Event(event *event.Event) error
+}
 
 type eventHandlerSpec struct {
 	name string
@@ -29,7 +33,7 @@ func NewLogger() (*Logger) {
 	}
 }
 
-func (logger *Logger) AddHandler(name string, eventHandler handler.Handler, levelMin event.Level, levelMax event.Level) {
+func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin event.Level, levelMax event.Level) {
 	//TODO lock
 	//TODO check name collision
 	eventHandlerSpec := &eventHandlerSpec{
@@ -76,24 +80,24 @@ func (logger *Logger) Stop() {
 
 func (logger *Logger) InitStdStreams() {
 	var stdoutFormat, stderrFormat string
-	if handler.IsTerminal(os.Stdout) {
+	if writer.IsTerminal(os.Stdout) {
 		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
 		stdoutFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
-	if handler.IsTerminal(os.Stderr) {
+	if writer.IsTerminal(os.Stderr) {
 		stderrFormat = formatter.CONSOLE_COLOR_FORMAT
 	} else {
 		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
 
-	stdoutHandler, _ := handler.NewEventIOWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
+	stdoutHandler, _ := writer.NewEventWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
 	logger.AddHandler("stdout", stdoutHandler, Debug, Notice)
-	stderrHandler, _ := handler.NewEventIOWriter(os.Stdout, stderrFormat)
+	stderrHandler, _ := writer.NewEventWriter(os.Stdout, stderrFormat)
 	logger.AddHandler("stderr", stderrHandler, Warning, Emergency)
 }
 func (logger *Logger) InitStdSyslog() (error) {
-	syslogHandler, err := syslog.New("", "", 0, "")
+	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
 	if err != nil {
 		return err
 	}

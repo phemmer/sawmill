@@ -42,10 +42,6 @@ type Event struct {
 func NewEvent(level Level, message string, data interface{}) *Event {
   now := time.Now()
 
-  // A
-  //fields, flatFields := fieldWalk(data)
-
-  // B
   flatFields := map[string]interface{}{}
   fields := deStruct(data, "", flatFields)
 
@@ -64,91 +60,6 @@ func (event *Event) LevelName() string {
 	return LevelName(event.Level)
 }
 
-func fieldWalk(data interface{}) (interface{}, map[string]interface{}) {
-  data, flatFields, isScalar := fieldWalkWith(data)
-  if isScalar {
-    data = map[string]interface{}{"_": data}
-  }
-
-  return data, flatFields
-}
-func fieldWalkWith(data interface{}) (interface{}, map[string]interface{}, bool) {
-  dataValue := reflect.ValueOf(data)
-  for dataValue.Kind() == reflect.Ptr {
-    dataValue = dataValue.Elem()
-  }
-
-  var result interface{}
-  flatFields := map[string]interface{}{}
-  isScalar := false
-
-  kind := dataValue.Kind()
-  if kind == reflect.Struct {
-    realResult := make(map[string]interface{})
-		structType := reflect.TypeOf(dataValue.Interface())
-		for i := 0; i < dataValue.NumField(); i++ {
-			field := dataValue.Field(i)
-			if ! field.CanInterface() { // skip if it's unexported
-				continue
-			}
-			key := structType.Field(i).Name
-
-      subData, subFlatFields, subIsScalar := fieldWalkWith(field.Interface())
-      realResult[key] = subData
-      if subIsScalar {
-        flatFields[key] = subData
-      } else {
-        for subFlatKey,subFlatData := range subFlatFields {
-          flatKey := fmt.Sprintf("%s.%v", key, subFlatKey)
-          flatFields[flatKey] = subFlatData
-        }
-      }
-		}
-    result = realResult
-  } else if kind == reflect.Map {
-    realResult := map[interface{}]interface{}{}
-    for _, keyValue := range dataValue.MapKeys() {
-      key := keyValue.Interface()
-      subDataValue := dataValue.MapIndex(keyValue)
-
-      subData, subFlatFields, subIsScalar := fieldWalkWith(subDataValue.Interface())
-      realResult[key] = subData
-      if subIsScalar {
-        flatFields[fmt.Sprintf("%v", key)] = subData
-      } else {
-        for subFlatKey,subFlatData := range subFlatFields {
-          flatKey := fmt.Sprintf("%v.%v", key, subFlatKey)
-          flatFields[flatKey] = subFlatData
-        }
-      }
-    }
-    result = realResult
-  } else if kind == reflect.Array || kind == reflect.Slice {
-    realResult := make([]interface{}, dataValue.Len())
-    for i := 0; i < dataValue.Len(); i++ {
-      key := i
-      subData := dataValue.Index(i).Interface()
-      subData, subFlatFields, subIsScalar := fieldWalkWith(subData)
-      if subIsScalar {
-        flatFields[fmt.Sprintf("%d", key)] = subData
-      } else {
-        for subFlatKey,subFlatData := range subFlatFields {
-          flatKey := fmt.Sprintf("%d.%v", key, subFlatKey)
-          flatFields[flatKey] = subFlatData
-        }
-      }
-    }
-    result = realResult
-  } else {
-    result = dataValue.Interface()
-    flatFields["_"] = result
-    isScalar = true
-  }
-
-  return result, flatFields, isScalar
-}
-
-
 func deStruct(data interface{}, parent string, flatFields map[string]interface{}) (interface{}) {
 	dataValue := reflect.ValueOf(data)
 	for dataValue.Kind() == reflect.Ptr {
@@ -158,56 +69,57 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
   kind := dataValue.Kind()
 
 	if kind == reflect.Struct {
-		result := make(map[string]interface{})
+		newData := make(map[string]interface{})
 		structType := reflect.TypeOf(dataValue.Interface())
 		for i := 0; i < dataValue.NumField(); i++ {
-			field := dataValue.Field(i)
-			if ! field.CanInterface() { // skip if it's unexported
+			subDataValue := dataValue.Field(i)
+			if ! subDataValue.CanInterface() { // skip if it's unexported
 				continue
 			}
-			k := structType.Field(i).Name
+			key := structType.Field(i).Name
 
-      var kFlat string
+      var keyFlat string
       if parent == "" {
-        kFlat = k
+        keyFlat = key
       } else {
-        kFlat = fmt.Sprintf("%s.%s", parent, k)
+        keyFlat = fmt.Sprintf("%s.%s", parent, key)
       }
 
-			result[k] = deStruct(field.Interface(), kFlat, flatFields)
+			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
 		}
-		return result
+		return newData
 	} else if dataValue.Kind() == reflect.Map {
-		result := make(map[interface{}]interface{})
-		for _, kValue := range dataValue.MapKeys() {
-			vValue := dataValue.MapIndex(kValue)
-			k := deStruct(kValue.Interface(), "", nil)
+		newData := make(map[interface{}]interface{})
+		for _, keyValue := range dataValue.MapKeys() {
+			subDataValue := dataValue.MapIndex(keyValue)
+			key := deStruct(keyValue.Interface(), "", nil)
 
-      var kFlat string
+      var keyFlat string
       if parent == "" {
-        kFlat = fmt.Sprintf("%v", k)
+        keyFlat = fmt.Sprintf("%v", key)
       } else {
-        kFlat = fmt.Sprintf("%s.%v", parent, k)
+        keyFlat = fmt.Sprintf("%s.%v", parent, key)
       }
 
-			result[k] = deStruct(vValue.Interface(), kFlat, flatFields)
+			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
 		}
-		return result
+		return newData
 	} else if dataValue.Kind() == reflect.Array || dataValue.Kind() == reflect.Slice {
-		var result []interface{}
+		var newData []interface{}
+
     for i := 0; i < dataValue.Len(); i++ {
-      v := dataValue.Index(i).Interface()
-      var kFlat string
+      subData := dataValue.Index(i).Interface()
+      var keyFlat string
       if parent == "" {
-        kFlat = fmt.Sprintf("%d", i)
+        keyFlat = fmt.Sprintf("%d", i)
       } else {
-        kFlat = fmt.Sprintf("%s.%d", parent, i)
+        keyFlat = fmt.Sprintf("%s.%d", parent, i)
       }
 
-      v = deStruct(v, kFlat, flatFields)
-			result = append(result, v)
+      subData = deStruct(subData, keyFlat, flatFields)
+			newData = append(newData, subData)
 		}
-		return result
+		return newData
 	}
 	// scalar
   if flatFields != nil {

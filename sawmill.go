@@ -17,10 +17,20 @@ const (
 )
 
 var logger *Logger
+
 func Event(level event.Level, message string, fields interface{}) {
 	if logger == nil {
 		logger = NewLogger()
 		logger.InitStdStreams()
 	}
 	logger.Event(level, message, fields)
+}
+
+func DefaultLogger() (*Logger) {
+	if logger == nil {
+		logger = NewLogger()
+		logger.InitStdStreams()
+	}
+
+	return logger
 }

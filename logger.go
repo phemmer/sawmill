@@ -22,6 +22,7 @@ type eventHandlerSpec struct {
 	eventChannel chan *event.Event
 	finishChannel chan bool
 }
+
 type Logger struct {
 	eventHandlerMap map[string]*eventHandlerSpec
 	waitgroup sync.WaitGroup
@@ -58,6 +59,7 @@ func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin eve
 
 	logger.eventHandlerMap[name] = eventHandlerSpec
 }
+
 func (logger *Logger) RemoveHandler(name string, wait bool) {
 	eventHandlerSpec := logger.eventHandlerMap[name]
 	if eventHandlerSpec == nil {
@@ -71,6 +73,7 @@ func (logger *Logger) RemoveHandler(name string, wait bool) {
 	}
 	<-eventHandlerSpec.finishChannel
 }
+
 func (logger *Logger) Stop() {
 	for handlerName, _ := range logger.eventHandlerMap {
 		logger.RemoveHandler(handlerName, false)

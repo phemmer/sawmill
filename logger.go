@@ -109,7 +109,7 @@ func (logger *Logger) InitStdStreams() {
 
 	stdoutHandler, _ := writer.NewEventWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
 	logger.AddHandler("stdout", stdoutHandler, Debug, Notice)
-	stderrHandler, _ := writer.NewEventWriter(os.Stdout, stderrFormat)
+	stderrHandler, _ := writer.NewEventWriter(os.Stderr, stderrFormat)
 	logger.AddHandler("stderr", stderrHandler, Warning, Emergency)
 }
 func (logger *Logger) InitStdSyslog() error {

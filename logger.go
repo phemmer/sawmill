@@ -25,6 +25,7 @@ type eventHandlerSpec struct {
 
 type Logger struct {
 	eventHandlerMap map[string]*eventHandlerSpec
+	mutex           sync.RWMutex
 	waitgroup       sync.WaitGroup
 }
 
@@ -35,7 +36,6 @@ func NewLogger() *Logger {
 }
 
 func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin event.Level, levelMax event.Level) {
-	//TODO lock
 	//TODO check name collision
 	eventHandlerSpec := &eventHandlerSpec{
 		name:          name,
@@ -57,16 +57,21 @@ func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin eve
 		finishChannel <- true
 	}(eventHandlerSpec.eventChannel, eventHandler.Event, &logger.waitgroup, eventHandlerSpec.finishChannel)
 
+	logger.mutex.Lock()
 	logger.eventHandlerMap[name] = eventHandlerSpec
+	logger.mutex.Unlock()
 }
 
 func (logger *Logger) RemoveHandler(name string, wait bool) {
+	logger.mutex.Lock()
 	eventHandlerSpec := logger.eventHandlerMap[name]
 	if eventHandlerSpec == nil {
 		// doesn't exist
+		logger.mutex.Unlock()
 		return
 	}
 	delete(logger.eventHandlerMap, name)
+	logger.mutex.Unlock()
 	eventHandlerSpec.eventChannel <- nil
 	if !wait {
 		return
@@ -75,9 +80,17 @@ func (logger *Logger) RemoveHandler(name string, wait bool) {
 }
 
 func (logger *Logger) Stop() {
+	logger.mutex.RLock()
+	handlerNames := make([]string, len(logger.eventHandlerMap))
 	for handlerName, _ := range logger.eventHandlerMap {
+		handlerNames = append(handlerNames, handlerName)
+	}
+	logger.mutex.RUnlock()
+
+	for _, handlerName := range handlerNames {
 		logger.RemoveHandler(handlerName, false)
 	}
+
 	logger.waitgroup.Wait() //TODO timeout?
 }
 
@@ -111,7 +124,7 @@ func (logger *Logger) InitStdSyslog() error {
 
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
 	logEvent := event.NewEvent(level, message, fields)
-	//TODO lock table, copy it, release lock, iterate over copy
+	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
 		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
 			continue
@@ -124,4 +137,5 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 			// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
 		}
 	}
+	logger.mutex.RUnlock()
 }

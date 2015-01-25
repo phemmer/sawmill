@@ -125,11 +125,17 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 		return newData
 	}
 	// scalar
+	var newData interface{}
+	if dataValue.IsValid() {
+		newData = dataValue.Interface()
+	} else {
+		newData = nil
+	}
 	if flatFields != nil {
 		if parent == "" {
 			parent = "."
 		}
-		flatFields[parent] = dataValue.Interface()
+		flatFields[parent] = newData
 	}
-	return dataValue.Interface()
+	return newData
 }

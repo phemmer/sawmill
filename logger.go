@@ -1,7 +1,6 @@
 package sawmill
 
 import (
-	"sync/atomic"
 	"fmt"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
@@ -9,6 +8,7 @@ import (
 	"github.com/phemmer/sawmill/handler/writer"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
 type Fields map[string]interface{}
@@ -22,6 +22,10 @@ type eventHandlerSpec struct {
 	levelMin, levelMax event.Level
 	eventChannel       chan *event.Event
 	finishChannel      chan bool
+
+	lastSentEventId          uint64
+	lastProcessedEventId     uint64
+	lastProcessedEventIdCond *sync.Cond
 }
 
 type Logger struct {
@@ -37,31 +41,44 @@ func NewLogger() *Logger {
 	}
 }
 
-func (logger *Logger) AddHandler(name string, eventHandler Handler, levelMin event.Level, levelMax event.Level) {
+func (logger *Logger) AddHandler(name string, handler Handler, levelMin event.Level, levelMax event.Level) {
 	//TODO check name collision
-	eventHandlerSpec := &eventHandlerSpec{
-		name:          name,
-		levelMin:      levelMin,
-		levelMax:      levelMax,
-		eventChannel:  make(chan *event.Event, 100),
-		finishChannel: make(chan bool, 1),
+	spec := &eventHandlerSpec{
+		name:                     name,
+		levelMin:                 levelMin,
+		levelMax:                 levelMax,
+		eventChannel:             make(chan *event.Event, 100),
+		finishChannel:            make(chan bool, 1),
+		lastProcessedEventIdCond: sync.NewCond(&sync.Mutex{}),
 	}
 
 	logger.waitgroup.Add(1)
-	go func(eventChannel chan *event.Event, callback func(*event.Event) error, waitgroup *sync.WaitGroup, finishChannel chan bool) {
-		defer waitgroup.Done()
-		for logEvent := range eventChannel {
-			if logEvent == nil {
-				break
-			}
-			callback(logEvent) //TODO error handler
-		}
-		finishChannel <- true
-	}(eventHandlerSpec.eventChannel, eventHandler.Event, &logger.waitgroup, eventHandlerSpec.finishChannel)
+	go handlerDriver(spec, handler, &logger.waitgroup)
 
 	logger.mutex.Lock()
-	logger.eventHandlerMap[name] = eventHandlerSpec
+	logger.eventHandlerMap[name] = spec
 	logger.mutex.Unlock()
+}
+func handlerDriver(spec *eventHandlerSpec, handler Handler, waitgroup *sync.WaitGroup) {
+	defer waitgroup.Done()
+
+	eventChannel := spec.eventChannel
+	finishChannel := spec.finishChannel
+
+	for logEvent := range eventChannel {
+		if logEvent == nil {
+			break
+		}
+
+		handler.Event(logEvent) //TODO error handler
+
+		spec.lastProcessedEventIdCond.L.Lock()
+		spec.lastProcessedEventId = logEvent.Id
+		spec.lastProcessedEventIdCond.Broadcast()
+		spec.lastProcessedEventIdCond.L.Unlock()
+	}
+
+	finishChannel <- true
 }
 
 func (logger *Logger) RemoveHandler(name string, wait bool) {
@@ -124,7 +141,7 @@ func (logger *Logger) InitStdSyslog() error {
 	return nil
 }
 
-func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
+func (logger *Logger) Event(level event.Level, message string, fields interface{}) uint64 {
 	eventId := atomic.AddUint64(&logger.lastEventId, 1)
 	logEvent := event.NewEvent(eventId, level, message, fields)
 
@@ -133,13 +150,39 @@ func (logger *Logger) Event(level event.Level, message string, fields interface{
 		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
 			continue
 		}
-		select {
-		case eventHandlerSpec.eventChannel <- logEvent:
-		default:
-			fmt.Fprintf(os.Stderr, "Unable to send event to handler. Buffer full. handler=%s\n", eventHandlerSpec.name)
-			//TODO generate an event for this, but put in a time-last-dropped so we don't send the message to the handler which is dropping
-			// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
+		if true { //TODO make dropping configurable per-handler
+			select {
+			case eventHandlerSpec.eventChannel <- logEvent:
+				atomic.StoreUint64(&eventHandlerSpec.lastSentEventId, logEvent.Id)
+			default:
+				fmt.Fprintf(os.Stderr, "Unable to send event to handler. Buffer full. handler=%s\n", eventHandlerSpec.name)
+				//TODO generate an event for this, but put in a time-last-dropped so we don't send the message to the handler which is dropping
+				// basically if we are dropping, and we last dropped < X seconds ago, don't generate another "event dropped" message
+			}
+		} else {
+			eventHandlerSpec.eventChannel <- logEvent
+			atomic.StoreUint64(&eventHandlerSpec.lastSentEventId, logEvent.Id)
 		}
+	}
+	logger.mutex.RUnlock()
+
+	return eventId
+}
+
+func (logger *Logger) Sync(eventId uint64) {
+	logger.mutex.RLock()
+	for _, eventHandlerSpec := range logger.eventHandlerMap {
+		if atomic.LoadUint64(&eventHandlerSpec.lastSentEventId) < eventId {
+			// lastSentEventId wasn't incremented, meaning it was dropped. no point waiting for it
+			continue
+		}
+
+		// wait for the lastProcessedEventId to become >= eventId
+		eventHandlerSpec.lastProcessedEventIdCond.L.Lock()
+		for eventHandlerSpec.lastProcessedEventId < eventId {
+			eventHandlerSpec.lastProcessedEventIdCond.Wait()
+		}
+		eventHandlerSpec.lastProcessedEventIdCond.L.Unlock()
 	}
 	logger.mutex.RUnlock()
 }

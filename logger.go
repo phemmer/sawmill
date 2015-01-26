@@ -1,6 +1,7 @@
 package sawmill
 
 import (
+	"sync/atomic"
 	"fmt"
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
@@ -27,6 +28,7 @@ type Logger struct {
 	eventHandlerMap map[string]*eventHandlerSpec
 	mutex           sync.RWMutex
 	waitgroup       sync.WaitGroup
+	lastEventId     uint64
 }
 
 func NewLogger() *Logger {
@@ -123,7 +125,9 @@ func (logger *Logger) InitStdSyslog() error {
 }
 
 func (logger *Logger) Event(level event.Level, message string, fields interface{}) {
-	logEvent := event.NewEvent(level, message, fields)
+	eventId := atomic.AddUint64(&logger.lastEventId, 1)
+	logEvent := event.NewEvent(eventId, level, message, fields)
+
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
 		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird

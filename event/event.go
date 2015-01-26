@@ -35,6 +35,7 @@ func LevelName(level Level) string {
 }
 
 type Event struct {
+	Id         uint64
 	Level      Level
 	Time       time.Time
 	Message    string
@@ -42,13 +43,14 @@ type Event struct {
 	FlatFields map[string]interface{}
 }
 
-func NewEvent(level Level, message string, data interface{}) *Event {
+func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
 	now := time.Now()
 
 	flatFields := map[string]interface{}{}
 	fields := deStruct(data, "", flatFields)
 
 	event := &Event{
+		Id:         id,
 		Time:       now,
 		Level:      level,
 		Message:    message,

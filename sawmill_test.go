@@ -53,8 +53,8 @@ func TestDefaultLogger(t *testing.T) {
 
 
 func TestEvent(t *testing.T) {
-  testEventStream(t, Notice, os.Stdout, "stdout")
-  testEventStream(t, Warning, os.Stderr, "stderr")
+  testEventStream(t, NoticeLevel, os.Stdout, "stdout")
+  testEventStream(t, WarningLevel, os.Stderr, "stderr")
 }
 func testEventStream(t *testing.T, level event.Level, stream *os.File, label string) {
   newStream, newStreamClose, err := CaptureStream(stream)

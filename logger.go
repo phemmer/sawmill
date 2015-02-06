@@ -128,16 +128,16 @@ func (logger *Logger) InitStdStreams() {
 	}
 
 	stdoutHandler, _ := writer.NewEventWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
-	logger.AddHandler("stdout", stdoutHandler, Debug, Notice)
+	logger.AddHandler("stdout", stdoutHandler, event.Debug, event.Notice)
 	stderrHandler, _ := writer.NewEventWriter(os.Stderr, stderrFormat)
-	logger.AddHandler("stderr", stderrHandler, Warning, Emergency)
+	logger.AddHandler("stderr", stderrHandler, event.Warning, event.Emergency)
 }
 func (logger *Logger) InitStdSyslog() error {
 	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
 	if err != nil {
 		return err
 	}
-	logger.AddHandler("syslog", syslogHandler, Debug, Emergency)
+	logger.AddHandler("syslog", syslogHandler, event.Debug, event.Emergency)
 
 	return nil
 }

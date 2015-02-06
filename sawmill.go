@@ -6,25 +6,17 @@ import (
 
 // these are copied here for convenience
 const (
-	Emergency, Emerg = event.Emergency, event.Emerg
-	Alert, Alrt      = event.Alert, event.Alrt
-	Critical, Crit   = event.Critical, event.Crit
-	Error, Err       = event.Error, event.Err
-	Warning, Warn    = event.Warning, event.Warn
-	Notice           = event.Notice
-	Info             = event.Info
-	Debug, Dbg       = event.Debug, event.Debug
+	EmergencyLevel = event.Emergency
+	AlertLevel     = event.Alert
+	CriticalLevel  = event.Critical
+	ErrorLevel     = event.Error
+	WarningLevel   = event.Warning
+	NoticeLevel    = event.Notice
+	InfoLevel      = event.Info
+	DebugLevel     = event.Debug
 )
 
 var logger *Logger
-
-func Event(level event.Level, message string, fields ...interface{}) {
-	if logger == nil {
-		logger = NewLogger()
-		logger.InitStdStreams()
-	}
-	logger.Event(level, message, fields...)
-}
 
 func DefaultLogger() *Logger {
 	if logger == nil {
@@ -33,4 +25,48 @@ func DefaultLogger() *Logger {
 	}
 
 	return logger
+}
+
+func Event(level event.Level, message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(level, message, fields...)
+}
+
+func Emergency(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Emergency, message, fields...)
+}
+
+func Alert(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Alert, message, fields...)
+}
+
+func Critical(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Critical, message, fields...)
+}
+
+func Error(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Error, message, fields...)
+}
+
+func Warning(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Warning, message, fields...)
+}
+
+func Notice(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Notice, message, fields...)
+}
+
+func Info(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Info, message, fields...)
+}
+
+func Debug(message string, fields ...interface{}) uint64 {
+	return DefaultLogger().Event(event.Debug, message, fields...)
+}
+
+func Sync(eventId uint64) {
+	DefaultLogger().Sync(eventId)
+}
+
+func Stop() {
+	DefaultLogger().Stop()
 }

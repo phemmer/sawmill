@@ -142,10 +142,18 @@ func (logger *Logger) InitStdSyslog() error {
 	return nil
 }
 
-func (logger *Logger) Event(level event.Level, message string, fields interface{}) uint64 {
+func (logger *Logger) Event(level event.Level, message string, fieldArgs ...interface{}) uint64 {
+	var fields interface{}
+	if len(fieldArgs) > 1 {
+		fields = fieldArgs
+	} else if len(fieldArgs) == 1 {
+		fields = fieldArgs[0]
+	} else if len(fieldArgs) == 0 {
+		fields = nil
+	}
+
 	eventId := atomic.AddUint64(&logger.lastEventId, 1)
 	logEvent := event.NewEvent(eventId, level, message, fields)
-
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
 		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird

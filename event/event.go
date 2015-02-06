@@ -46,8 +46,11 @@ type Event struct {
 func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
 	now := time.Now()
 
+	var fields interface{}
 	flatFields := map[string]interface{}{}
-	fields := deStruct(data, "", flatFields)
+	if data != nil {
+		fields = deStruct(data, "", flatFields)
+	}
 
 	event := &Event{
 		Id:         id,

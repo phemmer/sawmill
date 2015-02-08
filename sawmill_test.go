@@ -36,7 +36,7 @@ func (handler *channelHandler) Next(timeout time.Duration) *event.Event {
 	} else {
 		select {
 		case logEvent = <-handler.channel:
-		case <-time.After(time.Second * timeout):
+		case <-time.After(timeout):
 		}
 	}
 	//fmt.Printf("Received from channel: %#v\n", logEvent)

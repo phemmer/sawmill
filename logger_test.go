@@ -75,6 +75,24 @@ func TestLoggerRemoveHandlerWait(t *testing.T) {
 
 	assert.Nil(t, handler.Next(time.Millisecond))
 }
+
+// check that adding a handler under the same name overrides the first
+func TestLoggerAddDuplicateHandler(t *testing.T) {
+	logger := NewLogger()
+
+	handler1 := NewChannelHandler()
+	logger.AddHandler("TestEvent", handler1, DebugLevel, EmergencyLevel)
+	defer logger.RemoveHandler("TestEvent", false)
+
+	handler2 := NewChannelHandler()
+	logger.AddHandler("TestEvent", handler2, DebugLevel, EmergencyLevel)
+
+	logger.Event(InfoLevel, "TestEvent")
+
+	assert.Nil(t, handler1.Next(time.Millisecond))
+	assert.NotNil(t, handler2.Next(time.Millisecond))
+}
+
 // Test all the helper functions
 // Test Sync()
 // Test Stop()

@@ -1,10 +1,11 @@
 package log
 
 import (
-	"io"
 	"fmt"
+	"io"
 	"os"
 	"sync"
+
 	sm "github.com/phemmer/sawmill"
 	"github.com/phemmer/sawmill/event/formatter"
 	"github.com/phemmer/sawmill/handler/writer"
@@ -23,17 +24,17 @@ var stdPrefix string
 var stdPrefixMutex sync.Mutex
 
 func Fatal(v ...interface{}) {
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + fmt.Sprint(v...)))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+fmt.Sprint(v...)))
 	sm.Stop()
 	os.Exit(1)
 }
 func Fatalf(format string, v ...interface{}) {
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + fmt.Sprintf(format, v...)))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+fmt.Sprintf(format, v...)))
 	sm.Stop()
 	os.Exit(1)
 }
 func Fatalln(v ...interface{}) {
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + fmt.Sprintln(v...)))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+fmt.Sprintln(v...)))
 	sm.Stop()
 	os.Exit(1)
 }
@@ -42,19 +43,19 @@ func Flags() int {
 }
 func Panic(v ...interface{}) {
 	message := fmt.Sprint(v...)
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + message))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+message))
 	sm.Stop()
 	panic(message)
 }
 func Panicf(format string, v ...interface{}) {
 	message := fmt.Sprintf(format, v...)
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + message))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+message))
 	sm.Stop()
 	panic(message)
 }
 func Panicln(v ...interface{}) {
 	message := fmt.Sprintln(v...)
-	sm.Sync(sm.Event(sm.CriticalLevel, Prefix() + message))
+	sm.Sync(sm.Event(sm.CriticalLevel, Prefix()+message))
 	sm.Stop()
 	panic(message)
 }
@@ -65,13 +66,13 @@ func Prefix() string {
 	return prefix
 }
 func Print(v ...interface{}) {
-	sm.Sync(sm.Event(sm.InfoLevel, Prefix() + fmt.Sprint(v...)))
+	sm.Sync(sm.Event(sm.InfoLevel, Prefix()+fmt.Sprint(v...)))
 }
 func Printf(format string, v ...interface{}) {
-	sm.Sync(sm.Event(sm.InfoLevel, Prefix() + fmt.Sprintf(format, v...)))
+	sm.Sync(sm.Event(sm.InfoLevel, Prefix()+fmt.Sprintf(format, v...)))
 }
 func Println(v ...interface{}) {
-	sm.Sync(sm.Event(sm.InfoLevel, Prefix() + fmt.Sprintln(v...)))
+	sm.Sync(sm.Event(sm.InfoLevel, Prefix()+fmt.Sprintln(v...)))
 }
 func SetFlags(flag int) {
 	//TODO
@@ -86,10 +87,11 @@ func SetPrefix(prefix string) {
 }
 
 type Logger struct {
-	sml *sm.Logger
-	prefix string
+	sml         *sm.Logger
+	prefix      string
 	prefixMutex sync.Mutex
 }
+
 func New(out io.Writer, prefix string, flag int) *Logger {
 	sml := sm.NewLogger()
 
@@ -142,13 +144,13 @@ func (l *Logger) Prefix() string {
 	return prefix
 }
 func (l *Logger) Print(v ...interface{}) {
-	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix() + fmt.Sprint(v...)))
+	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix()+fmt.Sprint(v...)))
 }
 func (l *Logger) Printf(format string, v ...interface{}) {
-	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix() + fmt.Sprintf(format, v...)))
+	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix()+fmt.Sprintf(format, v...)))
 }
 func (l *Logger) Println(v ...interface{}) {
-	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix() + fmt.Sprintln(v...)))
+	l.sml.Sync(l.sml.Event(sm.InfoLevel, l.Prefix()+fmt.Sprintln(v...)))
 }
 func (l *Logger) SetFlags(flag int) {
 	//TODO

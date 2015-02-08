@@ -22,19 +22,55 @@ func NewChannelHandler() (*channelHandler) {
   }
 }
 func (handler *channelHandler) Event(logEvent *event.Event) (error) {
-  fmt.Printf("Sending to channel: %#v\n", logEvent)
+  //fmt.Printf("Sending to channel: %#v\n", logEvent)
   handler.channel<- logEvent
   return nil
 }
 func (handler *channelHandler) Next(timeout time.Duration) (*event.Event) {
   var logEvent *event.Event
-  select {
-  case logEvent = <-handler.channel:
-  case <-time.After(time.Second * timeout):
+  if timeout == 0 {
+    select {
+    case logEvent = <-handler.channel:
+    default:
+    }
+  } else {
+    select {
+    case logEvent = <-handler.channel:
+    case <-time.After(time.Second * timeout):
+    }
   }
-  fmt.Printf("Received from channel: %#v\n", logEvent)
+  //fmt.Printf("Received from channel: %#v\n", logEvent)
   return logEvent
 }
+
+
+type captureHandler struct {
+  events []*event.Event
+  mutex  sync.Mutex
+}
+func (handler *captureHandler) Event(logEvent *event.Event) (error) {
+  handler.mutex.Lock()
+  handler.events = append(handler.events, logEvent)
+  handler.mutex.Unlock()
+  return nil
+}
+func (handler *captureHandler) Last() (*event.Event) {
+  handler.mutex.Lock()
+  logEvent := handler.events[len(handler.events)-1]
+  handler.mutex.Unlock()
+  return logEvent
+}
+
+func CaptureEvents() (*captureHandler) {
+  logger := DefaultLogger()
+  logger.RemoveHandler("stdout", false)
+  logger.RemoveHandler("stderr", false)
+  handler := &captureHandler{}
+  logger.AddHandler("testcap", handler, DebugLevel, EmergencyLevel)
+  return handler
+}
+
+
 
 
 

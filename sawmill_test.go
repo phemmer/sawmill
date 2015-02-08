@@ -64,6 +64,8 @@ func testEventStream(t *testing.T, level event.Level, stream *os.File, label str
   }
   defer newStreamClose()
 
+  DefaultLogger().InitStdStreams() // re-open streams so that colors are off
+
   buf := make([]byte, 1024)
 
   message := fmt.Sprintf("TestEvent %s", label)

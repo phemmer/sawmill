@@ -210,6 +210,12 @@ func (logger *Logger) Debug(message string, fields ...interface{}) uint64 {
 	return logger.Event(event.Debug, message, fields...)
 }
 
+func (logger *Logger) Fatal(message string, fields ...interface{}) {
+	logger.Critical(message, fields...)
+	logger.Stop()
+	os.Exit(1)
+}
+
 func (logger *Logger) Sync(eventId uint64) {
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {

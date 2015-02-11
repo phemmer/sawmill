@@ -1,6 +1,8 @@
 package sawmill
 
 import (
+	"os"
+
 	"github.com/phemmer/sawmill/event"
 )
 
@@ -61,6 +63,12 @@ func Info(message string, fields ...interface{}) uint64 {
 
 func Debug(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Debug, message, fields...)
+}
+
+func Fatal(message string, fields ...interface{}) {
+	Critical(message, fields)
+	Stop()
+	os.Exit(1)
 }
 
 func Sync(eventId uint64) {

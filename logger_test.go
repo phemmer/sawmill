@@ -1,6 +1,7 @@
 package sawmill
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -91,6 +92,45 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 
 	assert.Nil(t, handler1.Next(time.Millisecond))
 	assert.NotNil(t, handler2.Next(time.Millisecond))
+}
+
+
+func testLoggerLevels(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	handler := NewChannelHandler()
+	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+
+	type testLoggerLevel struct {
+		String string
+		Func func(string, ...interface{}) uint64
+	}
+	testLevels := []testLoggerLevel{
+		{"Emergency", logger.Emergency},
+		{"Alert", logger.Alert},
+		{"Critical", logger.Critical},
+		{"Error", logger.Error},
+		{"Warning", logger.Warning},
+		{"Notice", logger.Notice},
+		{"Info", logger.Info},
+		{"Debug", logger.Debug},
+	}
+	for _, level := range testLevels {
+		message := fmt.Sprintf("TestLevel %s", level.String)
+
+		level.Func(message, Fields{"level": level.String})
+
+		logEvent := handler.Next(time.Millisecond)
+
+		if assert.NotNil(t, logEvent) {
+			assert.Equal(t, logEvent.Message, message)
+
+			if assert.NotNil(t, logEvent.Fields) {
+				assert.Equal(t, logEvent.FlatFields["level"], level.String)
+			}
+		}
+	}
 }
 
 // Test all the helper functions

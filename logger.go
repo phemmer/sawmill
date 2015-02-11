@@ -178,36 +178,36 @@ func (logger *Logger) Event(level event.Level, message string, fieldArgs ...inte
 	return eventId
 }
 
-func (logger *Logger) Emergency(message string, fields interface{}) uint64 {
-	return logger.Event(event.Emergency, message, fields)
+func (logger *Logger) Emergency(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Emergency, message, fields...)
 }
 
-func (logger *Logger) Alert(message string, fields interface{}) uint64 {
-	return logger.Event(event.Alert, message, fields)
+func (logger *Logger) Alert(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Alert, message, fields...)
 }
 
-func (logger *Logger) Critical(message string, fields interface{}) uint64 {
-	return logger.Event(event.Critical, message, fields)
+func (logger *Logger) Critical(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Critical, message, fields...)
 }
 
-func (logger *Logger) Error(message string, fields interface{}) uint64 {
-	return logger.Event(event.Error, message, fields)
+func (logger *Logger) Error(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Error, message, fields...)
 }
 
-func (logger *Logger) Warning(message string, fields interface{}) uint64 {
-	return logger.Event(event.Warning, message, fields)
+func (logger *Logger) Warning(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Warning, message, fields...)
 }
 
-func (logger *Logger) Notice(message string, fields interface{}) uint64 {
-	return logger.Event(event.Notice, message, fields)
+func (logger *Logger) Notice(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Notice, message, fields...)
 }
 
-func (logger *Logger) Info(message string, fields interface{}) uint64 {
-	return logger.Event(event.Info, message, fields)
+func (logger *Logger) Info(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Info, message, fields...)
 }
 
-func (logger *Logger) Debug(message string, fields interface{}) uint64 {
-	return logger.Event(event.Debug, message, fields)
+func (logger *Logger) Debug(message string, fields ...interface{}) uint64 {
+	return logger.Event(event.Debug, message, fields...)
 }
 
 func (logger *Logger) Sync(eventId uint64) {

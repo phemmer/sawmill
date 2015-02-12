@@ -2,6 +2,7 @@ package sawmill
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -172,5 +173,51 @@ func TestLoggerFatal(t *testing.T) {
 	assert.Equal(t, exitCode, 1)
 }
 
-// Test Sync()
+// this test is a bit complicated because we have to deal with synchronizing 2 goroutines
+// The idea is: 
+// * We generate an event
+// * A goroutine calls logger.Sync() to wait for the handler to process it
+// * The handler doesn't process it until we call handler.Next()
+// * handler.Next() gives us the event which we store in a shared variable
+// * The Sync() goroutine notifies the main goroutine that it has set the shared variable
+// * The main goroutine checks that the shared variable matches the generated event
+// Then we run it 100 times just to make sure there's no racyness (there shouldn't be, but we want to make sure)
+func TestSync(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	handler := NewChannelHandler()
+	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+
+	var lastHandledEventId uint64
+	cond := sync.NewCond(&sync.Mutex{})
+	for i := 0; i < 100; i++ {
+
+		eventId := logger.Info("Test sync", Fields{"i": i})
+		go func() {
+			logger.Sync(eventId) // will block waiting for handler.Next() to be called
+			cond.L.Lock()
+			lastHandledEventId = eventId
+			cond.Broadcast()
+			cond.L.Unlock()
+		}()
+		runtime.Gosched()
+
+		// This is the main bit of possible racyness, which is the reason for runtime.Gosched() above
+		// It shouldn't be racy at all, but in case it is, try to catch it
+		cond.L.Lock()
+		assert.True(t, lastHandledEventId < eventId)
+		cond.L.Unlock()
+
+		cond.L.Lock()
+		logEvent := handler.Next(time.Millisecond) // this should cause the logger.Sync() to return
+
+		cond.Wait()
+		assert.Equal(t, lastHandledEventId, eventId)
+		assert.Equal(t, eventId, logEvent.Id)
+		cond.L.Unlock()
+	}
+}
+
+// Test dropping
 // Test Stop()

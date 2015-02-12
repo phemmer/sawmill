@@ -95,7 +95,7 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 }
 
 
-func testLoggerLevels(t *testing.T) {
+func TestLoggerLevels(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
@@ -133,6 +133,5 @@ func testLoggerLevels(t *testing.T) {
 	}
 }
 
-// Test all the helper functions
 // Test Sync()
 // Test Stop()

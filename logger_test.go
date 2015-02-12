@@ -96,39 +96,42 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 	assert.NotNil(t, handler2.Next(time.Millisecond))
 }
 
-func TestLoggerLevels(t *testing.T) {
+func TestLoggerHelpers(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
 	handler := NewChannelHandler()
 	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
 
-	type testLoggerLevel struct {
+	type testLoggerHelper struct {
 		String string
 		Func   func(string, ...interface{}) uint64
+		Level  event.Level
 	}
-	testLevels := []testLoggerLevel{
-		{"Emergency", logger.Emergency},
-		{"Alert", logger.Alert},
-		{"Critical", logger.Critical},
-		{"Error", logger.Error},
-		{"Warning", logger.Warning},
-		{"Notice", logger.Notice},
-		{"Info", logger.Info},
-		{"Debug", logger.Debug},
+	testHelpers := []testLoggerHelper{
+		{"Emergency", logger.Emergency, EmergencyLevel},
+		{"Alert", logger.Alert, AlertLevel},
+		{"Critical", logger.Critical, CriticalLevel},
+		{"Error", logger.Error, ErrorLevel},
+		{"Warning", logger.Warning, WarningLevel},
+		{"Notice", logger.Notice, NoticeLevel},
+		{"Info", logger.Info, InfoLevel},
+		{"Debug", logger.Debug, DebugLevel},
 	}
-	for _, level := range testLevels {
-		message := fmt.Sprintf("TestLevel %s", level.String)
+	for _, helper := range testHelpers {
+		message := fmt.Sprintf("TestHelper %s", helper.String)
 
-		level.Func(message, Fields{"level": level.String})
+		helper.Func(message, Fields{"helper": helper.String})
 
 		logEvent := handler.Next(time.Millisecond)
 
 		if assert.NotNil(t, logEvent) {
 			assert.Equal(t, logEvent.Message, message)
 
+			assert.Equal(t, logEvent.Level, helper.Level)
+
 			if assert.NotNil(t, logEvent.Fields) {
-				assert.Equal(t, logEvent.FlatFields["level"], level.String)
+				assert.Equal(t, logEvent.FlatFields["helper"], helper.String)
 			}
 		}
 	}

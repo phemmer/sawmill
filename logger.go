@@ -12,6 +12,8 @@ import (
 	"github.com/phemmer/sawmill/handler/writer"
 )
 
+var exit func(code int) = os.Exit // this is for testing so we can prevent an actual exit
+
 type Fields map[string]interface{}
 
 type Handler interface {
@@ -213,7 +215,7 @@ func (logger *Logger) Debug(message string, fields ...interface{}) uint64 {
 func (logger *Logger) Fatal(message string, fields ...interface{}) {
 	logger.Critical(message, fields...)
 	logger.Stop()
-	os.Exit(1)
+	exit(1)
 }
 
 func (logger *Logger) Sync(eventId uint64) {

@@ -2,9 +2,11 @@ package sawmill
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/phemmer/sawmill/event"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -94,7 +96,6 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 	assert.NotNil(t, handler2.Next(time.Millisecond))
 }
 
-
 func TestLoggerLevels(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
@@ -104,7 +105,7 @@ func TestLoggerLevels(t *testing.T) {
 
 	type testLoggerLevel struct {
 		String string
-		Func func(string, ...interface{}) uint64
+		Func   func(string, ...interface{}) uint64
 	}
 	testLevels := []testLoggerLevel{
 		{"Emergency", logger.Emergency},
@@ -131,6 +132,41 @@ func TestLoggerLevels(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestLoggerFatal(t *testing.T) {
+	exitBkup := exit
+	var exitCode int
+	exit = func(code int) { exitCode = code }
+	defer func() { exit = exitBkup }()
+
+	logger := NewLogger()
+	defer logger.Stop()
+
+	handler := NewChannelHandler()
+	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+
+	// logger.Fatal performs a Stop(), which waits for the handler to process the event. So we have to process it or we deadlock. We do this by starting a goroutine
+	var logEvent *event.Event
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		logEvent = handler.Next(time.Second)
+		wg.Done()
+	}()
+
+	logger.Fatal("TestHelper Fatal", Fields{"helper": "Fatal"})
+	wg.Wait()
+
+	if assert.NotNil(t, logEvent) {
+		assert.Equal(t, logEvent.Message, "TestHelper Fatal")
+
+		if assert.NotNil(t, logEvent.Fields) {
+			assert.Equal(t, logEvent.FlatFields["helper"], "Fatal")
+		}
+	}
+
+	assert.Equal(t, exitCode, 1)
 }
 
 // Test Sync()

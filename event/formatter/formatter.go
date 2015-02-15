@@ -3,7 +3,9 @@ package formatter
 import (
 	"fmt"
 	"github.com/phemmer/sawmill/event"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 type ansiColorCodes struct {
@@ -36,9 +38,9 @@ var colors = ansiColorCodes{
 }
 
 const (
-	SIMPLE_FORMAT          = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
-	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$.ToString $v}}{{end}}"
-	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$.ToString $v}}{{end}}"
+	SIMPLE_FORMAT          = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$.Quote $v}}{{end}}"
+	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$.Quote $v}}{{end}}"
+	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$.Quote $v}}{{end}}"
 )
 
 type Formatter struct {
@@ -76,6 +78,25 @@ func (formatter *Formatter) ToString(data interface{}) string {
 	}
 
 	return fmt.Sprintf("%v", data)
+}
+
+func needQuote(str string) bool {
+	for _, char := range str {
+		if unicode.IsSpace(char) {
+			return true
+		}
+	}
+
+	return false
+}
+func (formatter *Formatter) Quote(data interface{}) string {
+	str := formatter.ToString(data)
+
+	if needQuote(str) {
+		return strconv.Quote(str)
+	}
+
+	return str
 }
 
 /*

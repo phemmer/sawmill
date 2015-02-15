@@ -37,8 +37,8 @@ var colors = ansiColorCodes{
 
 const (
 	SIMPLE_FORMAT          = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
-	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$v}}{{end}}"
-	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$v}}{{end}}"
+	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$.ToString $v}}{{end}}"
+	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$.ToString $v}}{{end}}"
 )
 
 type Formatter struct {
@@ -64,6 +64,18 @@ func (formatter *Formatter) Color(text string) string {
 		levelColor = colors.Blue
 	}
 	return fmt.Sprintf("%s%s%s", levelColor, text, colors.Reset)
+}
+
+func (formatter *Formatter) ToString(data interface{}) string {
+	if str, ok := data.(string); ok {
+		return str
+	}
+
+	if byteSlice, ok := data.([]byte); ok {
+		return string(byteSlice)
+	}
+
+	return fmt.Sprintf("%v", data)
 }
 
 /*

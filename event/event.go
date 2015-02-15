@@ -123,6 +123,13 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 		}
 		return newData
 	} else if dataValue.Kind() == reflect.Array || dataValue.Kind() == reflect.Slice {
+		if byteSlice, ok := dataValue.Interface().([]byte); ok {
+			var newData []byte
+			newData = append(newData, byteSlice...)
+			flatFields[parent] = newData
+			return newData
+		}
+
 		var newData []interface{}
 
 		for i := 0; i < dataValue.Len(); i++ {

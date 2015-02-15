@@ -68,6 +68,9 @@ func (event *Event) LevelName() string {
 	return LevelName(event.Level)
 }
 
+//TODO break each kind up into separate functions
+//TODO This is probably rather ineffecient. We should look into how the `fmt` package works and see what we can rip out of it.
+//     Basically the end goal of this function is to have a single level map with keys and values (flatFields), and to copy the data in the original 'fields' struct so that there's no possible race conditions due to modifications after the event was generated.
 func deStruct(data interface{}, parent string, flatFields map[string]interface{}) interface{} {
 	dataValue := reflect.ValueOf(data)
 	for dataValue.Kind() == reflect.Ptr {
@@ -77,6 +80,13 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 	kind := dataValue.Kind()
 
 	if kind == reflect.Struct {
+		//TODO for simple types, such as time.Time, copy them into newData instead of stringifying
+		if stringer, ok := dataValue.Interface().(fmt.Stringer); ok {
+			newData := stringer.String()
+			flatFields[parent] = newData
+			return newData
+		}
+
 		newData := make(map[string]interface{})
 		structType := reflect.TypeOf(dataValue.Interface())
 		for i := 0; i < dataValue.NumField(); i++ {

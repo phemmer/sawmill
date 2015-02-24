@@ -38,7 +38,7 @@ var colors = ansiColorCodes{
 }
 
 const (
-	SIMPLE_FORMAT          = "{{.Message}}{{range $k,$v := .Fields}} {{$k}}={{$.Quote $v}}{{end}}"
+	SIMPLE_FORMAT          = "{{.Message}} --{{range $k,$v := .Fields}} {{$k}}={{$.Quote $v}}{{end}}"
 	CONSOLE_COLOR_FORMAT   = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | .Color | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k | $.Color}}={{$.Quote $v}}{{end}}"
 	CONSOLE_NOCOLOR_FORMAT = "{{.Time \"2006-01-02_15:04:05.000\"}} {{.Level | printf \"%s>\" | .Pad -10}} {{.Message | .Pad -30}}{{range $k,$v := .Fields}} {{$k}}={{$.Quote $v}}{{end}}"
 )

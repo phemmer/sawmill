@@ -58,7 +58,7 @@ func (formatter *Formatter) Level() string {
 }
 func (formatter *Formatter) Color(text string) string {
 	var levelColor []byte
-	if formatter.Event.Level <= event.Error {
+	if formatter.Event.Level >= event.Error {
 		levelColor = colors.Red
 	} else if formatter.Event.Level == event.Warning {
 		levelColor = colors.Yellow

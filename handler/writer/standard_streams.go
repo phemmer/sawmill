@@ -35,7 +35,7 @@ func NewStandardStreamsWriter() *standardStreamsWriter {
 }
 
 func (writer *standardStreamsWriter) Event(logEvent *event.Event) error {
-	if logEvent.Level <= event.Warning { //TODO fix the ordering of the levels to be what is expected
+	if logEvent.Level >= event.Warning {
 		return writer.stderrWriter.Event(logEvent)
 	}
 	return writer.stdoutWriter.Event(logEvent)

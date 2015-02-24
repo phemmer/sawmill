@@ -9,25 +9,25 @@ import (
 type Level int
 
 const (
-	Emergency, Emerg Level = iota, iota
-	Alert, Alrt
-	Critical, Crit
-	Error, Err
-	Warning, Warn
-	Notice, _
+	Debug, Dbg Level = iota, iota
 	Info, _
-	Debug, Dbg
+	Notice, _
+	Warning, Warn
+	Error, Err
+	Critical, Crit
+	Alert, Alrt
+	Emergency, Emerg
 )
 
 var LevelNames = [8]string{
-	"Emergency",
-	"Alert",
-	"Critical",
-	"Error",
-	"Warning",
-	"Notice",
-	"Info",
 	"Debug",
+	"Info",
+	"Notice",
+	"Warning",
+	"Error",
+	"Critical",
+	"Alert",
+	"Emergency",
 }
 
 func LevelName(level Level) string {

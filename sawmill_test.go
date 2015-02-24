@@ -66,7 +66,7 @@ func CaptureEvents() *captureHandler {
 	logger.RemoveHandler("stdout", false)
 	logger.RemoveHandler("stderr", false)
 	handler := &captureHandler{}
-	logger.AddHandler("testcap", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("testcap", handler)
 	return handler
 }
 

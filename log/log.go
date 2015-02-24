@@ -97,7 +97,7 @@ func New(out io.Writer, prefix string, flag int) *Logger {
 
 	handler, _ := writer.NewEventWriter(out, formatter.CONSOLE_NOCOLOR_FORMAT)
 
-	sml.AddHandler("logwriter", handler, sm.DebugLevel, sm.EmergencyLevel)
+	sml.AddHandler("logwriter", handler)
 
 	return &Logger{sml: sml, prefix: prefix}
 }

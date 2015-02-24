@@ -15,7 +15,7 @@ func TestLoggerEvent(t *testing.T) {
 	handler := NewChannelHandler()
 
 	logger := NewLogger()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 	defer logger.RemoveHandler("TestEvent", false)
 
 	logger.Event(InfoLevel, "TestEvent", nil)
@@ -32,7 +32,7 @@ func TestLoggerRemoveHandler(t *testing.T) {
 	handler := NewChannelHandler()
 
 	logger := NewLogger()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 	logger.RemoveHandler("TestEvent", true)
 
 	logger.Sync(logger.Event(InfoLevel, "TestEvent"))
@@ -45,7 +45,7 @@ func TestLoggerRemoveHandlerTwice(t *testing.T) {
 	handler := NewChannelHandler()
 
 	logger := NewLogger()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 	logger.RemoveHandler("TestEvent", false)
 	logger.RemoveHandler("TestEvent", false)
 }
@@ -55,7 +55,7 @@ func TestLoggerRemoveHandlerWait(t *testing.T) {
 	handler := NewChannelHandler()
 
 	logger := NewLogger()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 
 	eventId1 := logger.Event(InfoLevel, "TestEvent")
 
@@ -85,11 +85,11 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 	logger := NewLogger()
 
 	handler1 := NewChannelHandler()
-	logger.AddHandler("TestEvent", handler1, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler1)
 	defer logger.RemoveHandler("TestEvent", false)
 
 	handler2 := NewChannelHandler()
-	logger.AddHandler("TestEvent", handler2, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler2)
 
 	logger.Event(InfoLevel, "TestEvent")
 
@@ -102,7 +102,7 @@ func TestLoggerHelpers(t *testing.T) {
 	defer logger.Stop()
 
 	handler := NewChannelHandler()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 
 	type testLoggerHelper struct {
 		String string
@@ -148,7 +148,7 @@ func TestLoggerFatal(t *testing.T) {
 	defer logger.Stop()
 
 	handler := NewChannelHandler()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 
 	// logger.Fatal performs a Stop(), which waits for the handler to process the event. So we have to process it or we deadlock. We do this by starting a goroutine
 	var logEvent *event.Event
@@ -174,7 +174,7 @@ func TestLoggerFatal(t *testing.T) {
 }
 
 // this test is a bit complicated because we have to deal with synchronizing 2 goroutines
-// The idea is: 
+// The idea is:
 // * We generate an event
 // * A goroutine calls logger.Sync() to wait for the handler to process it
 // * The handler doesn't process it until we call handler.Next()
@@ -187,7 +187,7 @@ func TestSync(t *testing.T) {
 	defer logger.Stop()
 
 	handler := NewChannelHandler()
-	logger.AddHandler("TestEvent", handler, DebugLevel, EmergencyLevel)
+	logger.AddHandler("TestEvent", handler)
 
 	var lastHandledEventId uint64
 	cond := sync.NewCond(&sync.Mutex{})

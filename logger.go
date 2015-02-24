@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 
 	"github.com/phemmer/sawmill/event"
-	"github.com/phemmer/sawmill/event/formatter"
 	"github.com/phemmer/sawmill/handler/syslog"
 	"github.com/phemmer/sawmill/handler/writer"
 )
@@ -21,10 +20,9 @@ type Handler interface {
 }
 
 type eventHandlerSpec struct {
-	name               string
-	levelMin, levelMax event.Level
-	eventChannel       chan *event.Event
-	finishChannel      chan bool
+	name          string
+	eventChannel  chan *event.Event
+	finishChannel chan bool
 
 	lastSentEventId          uint64
 	lastProcessedEventId     uint64
@@ -44,12 +42,10 @@ func NewLogger() *Logger {
 	}
 }
 
-func (logger *Logger) AddHandler(name string, handler Handler, levelMin event.Level, levelMax event.Level) {
+func (logger *Logger) AddHandler(name string, handler Handler) {
 	//TODO check name collision
 	spec := &eventHandlerSpec{
 		name:                     name,
-		levelMin:                 levelMin,
-		levelMax:                 levelMax,
 		eventChannel:             make(chan *event.Event, 100),
 		finishChannel:            make(chan bool, 1),
 		lastProcessedEventIdCond: sync.NewCond(&sync.Mutex{}),
@@ -117,29 +113,14 @@ func (logger *Logger) Stop() {
 }
 
 func (logger *Logger) InitStdStreams() {
-	var stdoutFormat, stderrFormat string
-	if writer.IsTerminal(os.Stdout) {
-		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
-	} else {
-		stdoutFormat = formatter.CONSOLE_NOCOLOR_FORMAT
-	}
-	if writer.IsTerminal(os.Stderr) {
-		stderrFormat = formatter.CONSOLE_COLOR_FORMAT
-	} else {
-		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
-	}
-
-	stdoutHandler, _ := writer.NewEventWriter(os.Stdout, stdoutFormat) // eat the error. the only possible issue is if the template has format errors, and we're using the default, which is hard-coded
-	logger.AddHandler("stdout", stdoutHandler, event.Debug, event.Notice)
-	stderrHandler, _ := writer.NewEventWriter(os.Stderr, stderrFormat)
-	logger.AddHandler("stderr", stderrHandler, event.Warning, event.Emergency)
+	logger.AddHandler("stdStreams", writer.NewStandardStreamsWriter())
 }
 func (logger *Logger) InitStdSyslog() error {
 	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
 	if err != nil {
 		return err
 	}
-	logger.AddHandler("syslog", syslogHandler, event.Debug, event.Emergency)
+	logger.AddHandler("syslog", syslogHandler)
 
 	return nil
 }
@@ -158,9 +139,6 @@ func (logger *Logger) Event(level event.Level, message string, fieldArgs ...inte
 	logEvent := event.NewEvent(eventId, level, message, fields)
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
-		if level > eventHandlerSpec.levelMin || level < eventHandlerSpec.levelMax { // levels are based off syslog levels, so the highest level (emergency) is `0`, and the min (debug) is `7`. This means our comparisons look weird
-			continue
-		}
 		if true { //TODO make dropping configurable per-handler
 			select {
 			case eventHandlerSpec.eventChannel <- logEvent:

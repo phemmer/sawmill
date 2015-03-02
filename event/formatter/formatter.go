@@ -63,7 +63,7 @@ func (formatter *Formatter) Color(text string) string {
 	} else if formatter.Event.Level == event.Warning {
 		levelColor = colors.Yellow
 	} else {
-		levelColor = colors.Blue
+		levelColor = colors.Cyan
 	}
 	return fmt.Sprintf("%s%s%s", levelColor, text, colors.Reset)
 }

@@ -76,7 +76,7 @@ func Debug(message string, fields ...interface{}) uint64 {
 }
 
 func Fatal(message string, fields ...interface{}) {
-	Critical(message, fields)
+	Critical(message, fields...)
 	Stop()
 	os.Exit(1)
 }

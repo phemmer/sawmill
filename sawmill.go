@@ -1,3 +1,13 @@
+/*
+Sawmill is an asynchronous, structured, log event handler.
+
+Asynchronous: Sawmill does not block execution waiting for the log message to be delivered to the destination (e.g. STDOUT).
+Because of this asynchronous processing, it is critical that you add a `defer sawmill.Stop()` at the top of your `main()`. This will ensure that when the program exits, it waits for any pending log events to flush out to their destination.
+
+And 'structured' means that sawmill places a heavy emphasis on events with ancillary data.
+A log event (e.g. `sawmill.Error()`) should have a simple string that is an event description, such as "Image processing failed", and then a map or struct included with details on the event.
+
+*/
 package sawmill
 
 import (

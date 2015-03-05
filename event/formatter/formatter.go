@@ -82,7 +82,7 @@ func (formatter *Formatter) ToString(data interface{}) string {
 
 func needQuote(str string) bool {
 	for _, char := range str {
-		if unicode.IsSpace(char) || !unicode.IsPrint(char) {
+		if unicode.IsSpace(char) || !unicode.IsPrint(char) || unicode.Is(unicode.Quotation_Mark, char) {
 			return true
 		}
 	}

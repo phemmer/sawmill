@@ -105,6 +105,23 @@ func deStruct(data interface{}, parent string, flatFields map[string]interface{}
 
 			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
 		}
+
+		if errorer, ok := dataValue.Interface().(error); ok {
+			errString := errorer.Error()
+			if len(newData) == 0 {
+				// this was a struct with no exported attributes on it.
+				// so just assume the thing is a pure error object, and return the error string
+				flatFields[parent] = errString
+				return errString
+			}
+			if errString != "" {
+				// this is a struct satisfying the error interface, but it has exported attributes as well
+				// set the 'Error' field as if it were just a regular attribute
+				key := parent + ".Error"
+				flatFields[key] = errString
+				newData["Error"] = errString
+			}
+		}
 		return newData
 	} else if dataValue.Kind() == reflect.Map {
 		newData := make(map[interface{}]interface{})

@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -46,10 +47,9 @@ type Event struct {
 func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
 	now := time.Now()
 
-	var fields interface{}
-	flatFields := map[string]interface{}{}
-	if data != nil {
-		fields = deStruct(data, "", flatFields)
+	dataCopy, flatFields := deStruct(data)
+	if flatFields == nil {
+		flatFields = map[string]interface{}{"_": dataCopy}
 	}
 
 	event := &Event{
@@ -57,7 +57,7 @@ func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
 		Time:       now,
 		Level:      level,
 		Message:    message,
-		Fields:     fields,
+		Fields:     dataCopy,
 		FlatFields: flatFields,
 	}
 
@@ -68,113 +68,122 @@ func (event *Event) LevelName() string {
 	return LevelName(event.Level)
 }
 
-//TODO break each kind up into separate functions
-//TODO This is probably rather ineffecient. We should look into how the `fmt` package works and see what we can rip out of it.
-//     Basically the end goal of this function is to have a single level map with keys and values (flatFields), and to copy the data in the original 'fields' struct so that there's no possible race conditions due to modifications after the event was generated.
-func deStruct(data interface{}, parent string, flatFields map[string]interface{}) interface{} {
+// deStruct will take any input object and return a copy of it, and a `map[string]interface{}` of any nested attributes.
+// If the object satisfies the `fmt.Stringer` interface (it has a `Strin()` method), then we will return that value without diving into nested attributes.
+func deStruct(data interface{}) (interface{}, map[string]interface{}) {
 	dataValue := reflect.ValueOf(data)
-	for dataValue.Kind() == reflect.Ptr {
-		dataValue = dataValue.Elem()
+	return deStructValue(dataValue)
+}
+func deStructValue(dataValue reflect.Value) (interface{}, map[string]interface{}) {
+	if stringer, ok := dataValue.Interface().(fmt.Stringer); ok {
+		newData := stringer.String()
+		return newData, nil
 	}
 
 	kind := dataValue.Kind()
-
-	if kind == reflect.Struct {
-		//TODO for simple types, such as time.Time, copy them into newData instead of stringifying
-		if stringer, ok := dataValue.Interface().(fmt.Stringer); ok {
-			newData := stringer.String()
-			flatFields[parent] = newData
-			return newData
-		}
-
-		newData := make(map[string]interface{})
-		structType := reflect.TypeOf(dataValue.Interface())
-		for i := 0; i < dataValue.NumField(); i++ {
-			subDataValue := dataValue.Field(i)
-			if !subDataValue.CanInterface() { // skip if it's unexported
-				continue
-			}
-			key := structType.Field(i).Name
-
-			var keyFlat string
-			if parent == "" {
-				keyFlat = key
-			} else {
-				keyFlat = fmt.Sprintf("%s.%s", parent, key)
-			}
-
-			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
-		}
-
-		if errorer, ok := dataValue.Interface().(error); ok {
-			errString := errorer.Error()
-			if len(newData) == 0 {
-				// this was a struct with no exported attributes on it.
-				// so just assume the thing is a pure error object, and return the error string
-				flatFields[parent] = errString
-				return errString
-			}
-			if errString != "" {
-				// this is a struct satisfying the error interface, but it has exported attributes as well
-				// set the 'Error' field as if it were just a regular attribute
-				key := parent + ".Error"
-				flatFields[key] = errString
-				newData["Error"] = errString
-			}
-		}
-		return newData
-	} else if dataValue.Kind() == reflect.Map {
-		newData := make(map[interface{}]interface{})
-		for _, keyValue := range dataValue.MapKeys() {
-			subDataValue := dataValue.MapIndex(keyValue)
-			key := deStruct(keyValue.Interface(), "", nil)
-
-			var keyFlat string
-			if parent == "" {
-				keyFlat = fmt.Sprintf("%v", key)
-			} else {
-				keyFlat = fmt.Sprintf("%s.%v", parent, key)
-			}
-
-			newData[key] = deStruct(subDataValue.Interface(), keyFlat, flatFields)
-		}
-		return newData
-	} else if dataValue.Kind() == reflect.Array || dataValue.Kind() == reflect.Slice {
-		if byteSlice, ok := dataValue.Interface().([]byte); ok {
-			var newData []byte
-			newData = append(newData, byteSlice...)
-			flatFields[parent] = newData
-			return newData
-		}
-
-		var newData []interface{}
-
-		for i := 0; i < dataValue.Len(); i++ {
-			subData := dataValue.Index(i).Interface()
-			var keyFlat string
-			if parent == "" {
-				keyFlat = fmt.Sprintf("%d", i)
-			} else {
-				keyFlat = fmt.Sprintf("%s.%d", parent, i)
-			}
-
-			subData = deStruct(subData, keyFlat, flatFields)
-			newData = append(newData, subData)
-		}
-		return newData
+	switch kind {
+	case reflect.Ptr, reflect.Interface:
+		return deStructReference(dataValue)
+	case reflect.Struct:
+		return deStructStruct(dataValue)
+	case reflect.Map:
+		return deStructMap(dataValue)
+	case reflect.Array, reflect.Slice:
+		return deStructSlice(dataValue)
+	default:
+		return deStructScalar(dataValue)
 	}
-	// scalar
+}
+func deStructReference(dataValue reflect.Value) (interface{}, map[string]interface{}) {
+	return deStructValue(dataValue.Elem())
+}
+func deStructStruct(dataValue reflect.Value) (interface{}, map[string]interface{}) {
+	newData := make(map[string]interface{})
+	flatData := make(map[string]interface{})
+
+	structType := reflect.TypeOf(dataValue.Interface())
+	for i := 0; i < dataValue.NumField(); i++ {
+		subDataValue := dataValue.Field(i)
+		if !subDataValue.CanInterface() { // skip if it's unexported
+			continue
+		}
+
+		key := structType.Field(i).Name
+
+		fieldValue, fieldMap := deStructValue(subDataValue)
+		newData[key] = fieldValue
+
+		if fieldMap == nil { // non-nested value (scalar or byte slice)
+			flatData[key] = fieldValue
+		} else {
+			for fieldMapKey, fieldMapValue := range fieldMap {
+				flatKey := key + "." + fieldMapKey
+				flatData[flatKey] = fieldMapValue
+			}
+		}
+	}
+
+	return newData, flatData
+}
+func deStructMap(dataValue reflect.Value) (interface{}, map[string]interface{}) {
+	newData := make(map[interface{}]interface{})
+	flatData := make(map[string]interface{})
+
+	for _, keyValue := range dataValue.MapKeys() {
+		subDataValue := dataValue.MapIndex(keyValue)
+		keyInterface, _ := deStructValue(keyValue) // TODO just use `fmt.Sprintf("%v", keyValue)`?
+		key := fmt.Sprintf("%v", keyInterface)
+
+		fieldValue, fieldMap := deStructValue(subDataValue)
+		newData[keyInterface] = fieldValue
+
+		if fieldMap == nil { // non-nested value (scalar or byte slice)
+			flatData[key] = fieldValue
+		} else {
+			for fieldMapKey, fieldMapValue := range fieldMap {
+				flatKey := key + "." + fieldMapKey
+				flatData[flatKey] = fieldMapValue
+			}
+		}
+	}
+
+	return newData, flatData
+}
+func deStructSlice(dataValue reflect.Value) (interface{}, map[string]interface{}) {
+	if dataValue.Kind() == reflect.Uint8 {
+		newDataValue := reflect.MakeSlice(dataValue.Type(), dataValue.Len(), dataValue.Cap())
+		newDataValue = reflect.AppendSlice(newDataValue, dataValue)
+		return newDataValue.Interface(), nil
+	}
+
+	newData := make([]interface{}, dataValue.Len())
+	flatData := make(map[string]interface{})
+	for i := 0; i < dataValue.Len(); i++ {
+		subDataValue := dataValue.Index(i)
+		key := strconv.Itoa(i)
+
+		fieldValue, fieldMap := deStructValue(subDataValue)
+		newData[i] = fieldValue
+
+		if fieldMap == nil { // non-nested value (scalar or byte slice)
+			flatData[key] = fieldValue
+		} else {
+			for fieldMapKey, fieldMapValue := range fieldMap {
+				flatKey := key + "." + fieldMapKey
+				flatData[flatKey] = fieldMapValue
+			}
+		}
+	}
+
+	return newData, flatData
+}
+func deStructScalar(dataValue reflect.Value) (interface{}, map[string]interface{}) {
 	var newData interface{}
 	if dataValue.IsValid() {
 		newData = dataValue.Interface()
 	} else {
 		newData = nil
 	}
-	if flatFields != nil {
-		if parent == "" {
-			parent = "."
-		}
-		flatFields[parent] = newData
-	}
-	return newData
+
+	return newData, nil
 }

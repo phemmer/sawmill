@@ -48,9 +48,6 @@ func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
 	now := time.Now()
 
 	dataCopy, flatFields := deStruct(data)
-	if flatFields == nil {
-		flatFields = map[string]interface{}{"_": dataCopy}
-	}
 
 	event := &Event{
 		Id:         id,
@@ -113,12 +110,11 @@ func deStructStruct(dataValue reflect.Value) (interface{}, map[string]interface{
 		fieldValue, fieldMap := deStructValue(subDataValue)
 		newData[key] = fieldValue
 
-		if fieldMap == nil { // non-nested value (scalar or byte slice)
-			flatData[key] = fieldValue
-		} else {
-			for fieldMapKey, fieldMapValue := range fieldMap {
-				flatKey := key + "." + fieldMapKey
-				flatData[flatKey] = fieldMapValue
+		for fieldMapKey, fieldMapValue := range fieldMap {
+			if fieldMapKey == "" {
+				flatData[key] = fieldMapValue
+			} else {
+				flatData[key+"."+fieldMapKey] = fieldMapValue
 			}
 		}
 	}
@@ -137,12 +133,11 @@ func deStructMap(dataValue reflect.Value) (interface{}, map[string]interface{}) 
 		fieldValue, fieldMap := deStructValue(subDataValue)
 		newData[keyInterface] = fieldValue
 
-		if fieldMap == nil { // non-nested value (scalar or byte slice)
-			flatData[key] = fieldValue
-		} else {
-			for fieldMapKey, fieldMapValue := range fieldMap {
-				flatKey := key + "." + fieldMapKey
-				flatData[flatKey] = fieldMapValue
+		for fieldMapKey, fieldMapValue := range fieldMap {
+			if fieldMapKey == "" {
+				flatData[key] = fieldMapValue
+			} else {
+				flatData[key+"."+fieldMapKey] = fieldMapValue
 			}
 		}
 	}
@@ -165,12 +160,11 @@ func deStructSlice(dataValue reflect.Value) (interface{}, map[string]interface{}
 		fieldValue, fieldMap := deStructValue(subDataValue)
 		newData[i] = fieldValue
 
-		if fieldMap == nil { // non-nested value (scalar or byte slice)
-			flatData[key] = fieldValue
-		} else {
-			for fieldMapKey, fieldMapValue := range fieldMap {
-				flatKey := key + "." + fieldMapKey
-				flatData[flatKey] = fieldMapValue
+		for fieldMapKey, fieldMapValue := range fieldMap {
+			if fieldMapKey == "" {
+				flatData[key] = fieldMapValue
+			} else {
+				flatData[key+"."+fieldMapKey] = fieldMapValue
 			}
 		}
 	}
@@ -185,5 +179,5 @@ func deStructScalar(dataValue reflect.Value) (interface{}, map[string]interface{
 		newData = nil
 	}
 
-	return newData, nil
+	return newData, map[string]interface{}{"": newData}
 }

@@ -12,6 +12,8 @@ package sawmill
 
 import (
 	"os"
+	"sync"
+	"sync/atomic"
 
 	"github.com/phemmer/sawmill/event"
 )
@@ -28,13 +30,28 @@ const (
 	DebugLevel     = event.Debug
 )
 
-var logger *Logger
+var defaultLoggerValue atomic.Value
+var defaultLoggerMutex sync.Mutex
 
+// DefaultLogger returns a common *Logger object that is shared among all consumers of the package. It is used implicitly by all the package level helper function (Event, Emergency, etc)
 func DefaultLogger() *Logger {
-	if logger == nil {
-		logger = NewLogger()
-		logger.InitStdStreams()
+	// The *Logger object is not created or intialized until after the first call to this function. This is because each Logger starts a goroutine, and we don't want to start a goroutine simply because the package was imported.
+	var logger *Logger
+
+	loggerValue := defaultLoggerValue.Load()
+	if loggerValue == nil {
+		defaultLoggerMutex.Lock()
+		loggerValue = defaultLoggerValue.Load()
+		if loggerValue == nil {
+			logger = NewLogger()
+			logger.InitStdStreams()
+			defaultLoggerValue.Store(logger)
+		}
+		defaultLoggerMutex.Unlock()
+		loggerValue = defaultLoggerValue.Load()
 	}
+
+	logger = loggerValue.(*Logger)
 
 	return logger
 }

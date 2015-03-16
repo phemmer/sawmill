@@ -1,6 +1,8 @@
 package event
 
+/*
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -63,3 +65,22 @@ func Test_deStruct_errorWithExports(t *testing.T) {
 
 	assert.Equal(t, "ERROR", fields["parent.Error"])
 }
+
+////////////////////////////////////////
+
+// Check that if we have a struct where the Error() is on the pointer, that we still work
+
+func Test_deStruct_errorNonPointer(t *testing.T) {
+	err := errors.New("ERROR")
+
+	fields := map[string]interface{}{}
+	errCopy := deStruct(err, "parent", fields)
+
+	errCopyMap, ok := errCopy.(map[string]interface{})
+	if assert.True(t, ok) {
+		assert.Equal(t, "ERROR", errCopyMap["Error"])
+	}
+
+	assert.Equal(t, "ERROR", fields["parent.Error"])
+}
+*/

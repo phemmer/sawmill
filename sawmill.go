@@ -187,6 +187,17 @@ func Sync(eventId uint64) {
 	DefaultLogger().Sync(eventId)
 }
 
+// SetSync controls synchronous event mode. When set to true, a function call
+// to generate an event does not return until the event has been processed.
+func SetSync(enabled bool) {
+	DefaultLogger().SetSync(enabled)
+}
+
+// GetSync indicates whether syncronous mode is enabled.
+func GetSync() bool {
+	return DefaultLogger().GetSync()
+}
+
 // Stop removes all destinations on the logger, and waits for any pending events to flush to their destinations.
 func Stop() {
 	DefaultLogger().checkPanic(recover())

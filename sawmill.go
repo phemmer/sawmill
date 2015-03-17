@@ -11,6 +11,7 @@ A log event (e.g. `sawmill.Error()`) should have a simple string that is an even
 package sawmill
 
 import (
+	"io"
 	"os"
 	"sync"
 	"sync/atomic"
@@ -104,4 +105,8 @@ func Sync(eventId uint64) {
 
 func Stop() {
 	DefaultLogger().Stop()
+}
+
+func NewWriter(level event.Level) io.WriteCloser {
+	return DefaultLogger().NewWriter(level)
 }

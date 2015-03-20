@@ -1,3 +1,5 @@
+[![Build status](https://travis-ci.org/phemmer/sawmill.svg?branch=master)](https://travis-ci.org/phemmer/sawmill)
+
 ***Note: Still under heavy development. Vendoring (E.G. [godep](https://github.com/tools/godep)) is highly recommended.***
 
 Sawmill is a flexible logging package for GO, with a strong emphasis on structured events.

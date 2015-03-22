@@ -4,8 +4,12 @@ Sawmill is an asynchronous, structured, log event handler.
 Asynchronous: Sawmill does not block execution waiting for the log message to be delivered to the destination (e.g. STDOUT).
 Because of this asynchronous processing, it is critical that you add a `defer sawmill.Stop()` at the top of your `main()`. This will ensure that when the program exits, it waits for any pending log events to flush out to their destination.
 
-And 'structured' means that sawmill places a heavy emphasis on events with ancillary data.
+Structured: Sawmill places a heavy emphasis on events with ancillary data.
 A log event (e.g. `sawmill.Error()`) should have a simple string that is an event description, such as "Image processing failed", and then a map or struct included with details on the event.
+
+----
+
+The base package provides a default logger that will send events to STDOUT or STDERR as appropriate. This default logger is shared by all consumers of the package.
 
 */
 package sawmill
@@ -21,14 +25,14 @@ import (
 
 // these are copied here for convenience
 const (
-	EmergencyLevel = event.Emergency
-	AlertLevel     = event.Alert
-	CriticalLevel  = event.Critical
-	ErrorLevel     = event.Error
-	WarningLevel   = event.Warning
-	NoticeLevel    = event.Notice
-	InfoLevel      = event.Info
 	DebugLevel     = event.Debug
+	InfoLevel      = event.Info
+	NoticeLevel    = event.Notice
+	WarningLevel   = event.Warning
+	ErrorLevel     = event.Error
+	CriticalLevel  = event.Critical
+	AlertLevel     = event.Alert
+	EmergencyLevel = event.Emergency
 )
 
 var defaultLoggerValue atomic.Value
@@ -57,56 +61,83 @@ func DefaultLogger() *Logger {
 	return logger
 }
 
+// Event queues a message at the given level.
+// Additional fields may be provided, which will be recursively copied at the time of the function call, and provided to the destination output handler.
+// It returns an event Id that can be used with Sync().
 func Event(level event.Level, message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(level, message, fields...)
 }
 
+// Emergency generates an event at the emergency level.
+// It returns an event Id that can be used with Sync().
 func Emergency(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Emergency, message, fields...)
 }
 
+// Alert generates an event at the alert level.
+// It returns an event Id that can be used with Sync().
 func Alert(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Alert, message, fields...)
 }
 
+// Critical generates an event at the critical level.
+// It returns an event Id that can be used with Sync().
 func Critical(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Critical, message, fields...)
 }
 
+// Error generates an event at the error level.
+// It returns an event Id that can be used with Sync().
 func Error(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Error, message, fields...)
 }
 
+// Warning generates an event at the warning level.
+// It returns an event Id that can be used with Sync().
 func Warning(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Warning, message, fields...)
 }
 
+// Notice generates an event at the notice level.
+// It returns an event Id that can be used with Sync().
 func Notice(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Notice, message, fields...)
 }
 
+// Info generates an event at the info level.
+// It returns an event Id that can be used with Sync().
 func Info(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Info, message, fields...)
 }
 
+// Debug generates an event at the debug level.
+// It returns an event Id that can be used with Sync().
 func Debug(message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(event.Debug, message, fields...)
 }
 
+// Fatal generates an event at the critical level, and then exits the program with status 1
 func Fatal(message string, fields ...interface{}) {
 	Critical(message, fields...)
 	Stop()
 	os.Exit(1)
 }
 
+// Sync blocks until the given event Id has been flushed out to all destinations.
 func Sync(eventId uint64) {
 	DefaultLogger().Sync(eventId)
 }
 
+// Stop removes all destinations on the logger, and waits for any pending events to flush to their destinations.
 func Stop() {
 	DefaultLogger().Stop()
 }
 
+// NewWriter returns an io.WriteCloser compatable object that can be used for traditional writing into sawmill.
+//
+// The main use case for this is to redirect the stdlib log package into sawmill. For example:
+//  log.SetOutput(sawmill.NewWriter(sawmill.InfoLevel))
+//  log.SetFlags(0) // sawmill does its own formatting
 func NewWriter(level event.Level) io.WriteCloser {
 	return DefaultLogger().NewWriter(level)
 }

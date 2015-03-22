@@ -1,3 +1,4 @@
+[![Documentation](https://godoc.org/github.com/phemmer/sawmill?status.png)](http://godoc.org/github.com/phemmer/sawmill)
 [![Build status](https://travis-ci.org/phemmer/sawmill.svg?branch=master)](https://travis-ci.org/phemmer/sawmill)
 
 ***Note: Still under heavy development. Vendoring (E.G. [godep](https://github.com/tools/godep)) is highly recommended.***

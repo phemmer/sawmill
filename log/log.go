@@ -1,3 +1,10 @@
+/*
+The log package provides stdlib log interface compatability to sawmill.
+
+Its purpose is to ease transition into sawmill, not be used as the main interface.
+
+Any events logged with this package are sent to the sawmill package-level logger (e.g. `sawmill.Info()`)
+*/
 package log
 
 import (

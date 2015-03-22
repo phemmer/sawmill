@@ -17,7 +17,7 @@ const (
 	Emergency, Emerg
 )
 
-var LevelNames = [8]string{
+var levelNames = [8]string{
 	"Debug",
 	"Info",
 	"Notice",
@@ -28,8 +28,9 @@ var LevelNames = [8]string{
 	"Emergency",
 }
 
+// LevelName converts a level into its textual representation.
 func LevelName(level Level) string {
-	return LevelNames[level]
+	return levelNames[level]
 }
 
 type Event struct {
@@ -41,23 +42,26 @@ type Event struct {
 	FlatFields map[string]interface{}
 }
 
-func NewEvent(id uint64, level Level, message string, data interface{}) *Event {
+// NewEvent creates a new Event object.
+// The time is set to current time, and the fields are deep-copied.
+func NewEvent(id uint64, level Level, message string, fields interface{}) *Event {
 	now := time.Now()
 
-	dataCopy, _, flatFields := deStruct(data)
+	fieldsCopy, _, flatFields := deStruct(fields)
 
 	event := &Event{
 		Id:         id,
 		Time:       now,
 		Level:      level,
 		Message:    message,
-		Fields:     dataCopy,
+		Fields:     fieldsCopy,
 		FlatFields: flatFields,
 	}
 
 	return event
 }
 
+// LevelName returns the textual representation of the level name for the event.
 func (event *Event) LevelName() string {
 	return LevelName(event.Level)
 }

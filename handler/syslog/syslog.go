@@ -1,3 +1,6 @@
+/*
+The syslog package is an event handler responsible for sending events to syslog.
+*/
 package syslog
 
 import (
@@ -12,8 +15,10 @@ import (
 	"time"
 )
 
+type level int
+
 const (
-	EMERG int = iota
+	EMERG level = iota
 	ALERT
 	CRIT
 	ERR
@@ -22,8 +27,11 @@ const (
 	INFO
 	DEBUG
 )
+
+type facility int
+
 const (
-	KERN int = iota << 3
+	KERN facility = iota << 3
 	USER
 	MAIL
 	DAEMON
@@ -45,7 +53,7 @@ const (
 	LOCAL7
 )
 
-var levelPriorityMap map[event.Level]int = map[event.Level]int{
+var levelPriorityMap map[event.Level]level = map[event.Level]level{
 	event.Debug:     DEBUG,
 	event.Info:      INFO,
 	event.Notice:    NOTICE,
@@ -61,12 +69,21 @@ type SyslogWriter struct {
 	syslogAddr       string
 	syslogConnection net.Conn
 	syslogHostname   string
-	syslogFacility   int
+	syslogFacility   facility
 	syslogTag        string
 	Template         *template.Template
 }
 
-func NewSyslogWriter(protocol string, addr string, facility int, templateString string) (*SyslogWriter, error) {
+// NewSyslogWriter attempts to connect to syslog, and returns a new SyslogWriter if successful.
+//
+// protocol is a "network" as defined by the net package. Commonly either "unix" or "unixgram". See net.Dial for available values. Defaults to "unix" if emtpy.
+//
+// addr is the address where to reach the syslog daemon. Also see net.Dial. If empty, "/dev/log", "/var/run/syslog", and "/var/run/log" are tried.
+//
+// facility is the syslog facility to use for all events processed through this handler. Defaults to USER.
+//
+// templateString is the sawmill/event/formatter compatable template to use for formatting events. Defaults to formatter.SIMPLE_FORMAT.
+func NewSyslogWriter(protocol string, addr string, facility facility, templateString string) (*SyslogWriter, error) {
 	tag := path.Base(os.Args[0])
 
 	if facility == 0 {
@@ -93,7 +110,7 @@ func NewSyslogWriter(protocol string, addr string, facility int, templateString 
 		Template:       formatterTemplate,
 	}
 
-	err = sw.Dial()
+	err = sw.dial()
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +118,9 @@ func NewSyslogWriter(protocol string, addr string, facility int, templateString 
 	return sw, nil
 }
 
-func (sw *SyslogWriter) Dial() error {
+// dial is based on log/syslog.Dial().
+// It was copied out as log/syslog.Dial() doesn't properly use the basename of ARGV[0].
+func (sw *SyslogWriter) dial() error {
 	if sw.syslogConnection != nil {
 		sw.syslogConnection.Close()
 		sw.syslogConnection = nil
@@ -137,13 +156,16 @@ func (sw *SyslogWriter) Dial() error {
 	return nil
 }
 
+// Event accepts an event and writes it out to the syslog daemon.
+// If the connection was lost, the function will attempt to reconnect once.
 func (sw *SyslogWriter) Event(logEvent *event.Event) error {
 	var templateBuffer bytes.Buffer
 	sw.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
 	return sw.sendMessage(logEvent, templateBuffer.Bytes())
 }
+
 func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) error {
-	priority := sw.syslogFacility | levelPriorityMap[event.Level]
+	priority := int(sw.syslogFacility) | int(levelPriorityMap[event.Level])
 	timestamp := event.Time.Format(time.StampMilli) // this is the BSD syslog format. IETF syslog format is better, but is still relatively new.
 	tag := sw.syslogTag
 	pid := os.Getpid()
@@ -151,7 +173,7 @@ func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) error {
 	data := []byte(fmt.Sprintf("<%d>%s %s[%d]: %s\n", priority, timestamp, tag, pid, message))
 
 	if sw.syslogConnection == nil {
-		err := sw.Dial()
+		err := sw.dial()
 		if err != nil {
 			return err
 		}
@@ -162,7 +184,7 @@ func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) error {
 		return nil
 	}
 
-	err = sw.Dial()
+	err = sw.dial()
 	if err != nil { // re-dial failed
 		return err
 	}

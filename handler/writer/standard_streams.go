@@ -11,6 +11,8 @@ type standardStreamsWriter struct {
 	stderrWriter *EventWriter
 }
 
+// NewStandardStreamsWriter is a convenience function for constructing a new writer which sends to STDOUT/STDERR.
+// If the output is sent to a TTY, the format is formatter.CONSOLE_COLOR_FORMAT. Otherwise it is formatter.CONSOLE_NOCOLOR_FORMAT. The only difference between the two are the use of color escape codes.
 func NewStandardStreamsWriter() *standardStreamsWriter {
 	var stdoutFormat, stderrFormat string
 	if IsTerminal(os.Stdout) {
@@ -34,6 +36,8 @@ func NewStandardStreamsWriter() *standardStreamsWriter {
 	return writer
 }
 
+// Event accepts an event and sends it to the appropriate output stream based on the event's level.
+// If the level is warning or higher, it is sent to STDERR. Otherwise it is sent to STDOUT.
 func (writer *standardStreamsWriter) Event(logEvent *event.Event) error {
 	if logEvent.Level >= event.Warning {
 		return writer.stderrWriter.Event(logEvent)

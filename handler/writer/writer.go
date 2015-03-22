@@ -1,3 +1,6 @@
+/*
+The writer package is an event handler responsible for sending events to a generic IO writer.
+*/
 package writer
 
 import (
@@ -10,17 +13,22 @@ import (
 	"text/template"
 )
 
+// IsTerminal returns whether the given stream (File) is attached to a TTY.
 func IsTerminal(stream interface {
 	Fd() uintptr
 }) bool {
 	return terminal.IsTerminal(int(stream.Fd()))
 }
 
+// EventWriter is responsible for converting an event into text using a template, and then sending that text to an io.Writer.
 type EventWriter struct {
 	Output   io.Writer
 	Template *template.Template
 }
 
+// NewEventWriter constructs a new EventWriter.
+// templateString must be a template supported by the sawmill/event/formatter package.
+// If the templateString is empty, the EventWriter will use sawmill/event/formatter.SIMPLE_FORMAT.
 func NewEventWriter(output io.Writer, templateString string) (*EventWriter, error) {
 	if templateString == "" {
 		templateString = formatter.SIMPLE_FORMAT
@@ -36,6 +44,8 @@ func NewEventWriter(output io.Writer, templateString string) (*EventWriter, erro
 	}
 	return ewriter, nil
 }
+
+// Event accepts an event, formats it, and writes it to the EventWriter's Output.
 func (ewriter *EventWriter) Event(logEvent *event.Event) error {
 	//ewriter.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer

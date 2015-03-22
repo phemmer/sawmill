@@ -4,3 +4,12 @@ notifications:
 branches:
   only:
     - master
+
+before_install:
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+
+script:
+  - go test -v -race ./...
+  - test -z "$(find . -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
+  - goveralls -repotoken $GOVERALLS_TOKEN

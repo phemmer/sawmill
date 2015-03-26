@@ -10,6 +10,8 @@ before_install:
   - go get github.com/mattn/goveralls
 
 script:
-  - go test -v -race ./...
   - test -z "$(find . -name '*.go' -exec gofmt -d {} + | tee /dev/stderr)"
-  - goveralls -repotoken $GOVERALLS_TOKEN
+  - go list ./... | sed -e "s#^$(go list .)#.#" | xargs -n 1 go test -v -race -coverprofile=>(sed -e '1!{/^mode:/d}' > .coverprofile)
+
+after_success:
+  - goveralls -coverprofile=.coverprofile -repotoken $GOVERALLS_TOKEN

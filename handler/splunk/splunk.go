@@ -1,5 +1,17 @@
 /*
-The splunk package is an event handler responsible for sending events to splunk via http stream.
+The splunk package is an event handler responsible for sending events to Splunk via the HTTP API.
+
+In the event that the Splunk API endpoint uses HTTPS and a certificate not recognized by the standard certificate authorities, you may use add the server/CA cert to splunk.CACerts.
+The CA cert for Splunk cloud is already recognized.
+
+Template
+
+The splunk template provides a few extra functions on top of the default sawmill event formatter template.
+
+ Hostname - The system hostname (os.Hostname())
+ Source - The application name (path.Base(os.Argv[0]))
+ Pid - The process ID (os.Getpid())
+
 */
 package splunk
 
@@ -19,10 +31,17 @@ import (
 	"github.com/phemmer/sawmill/event/formatter"
 )
 
+// SplunkFormat is the default template format.
+// It is meant to work with the 'syslog' splunk sourcetype, such that the splunk field extraction matches most of the headers. The only header not properly parsed is the level.
 const SplunkFormat = "{{.Time \"2006-01-02 15:04:05.000 -0700\"}} {{.Level}}({{.Event.Level}}) {{Source}}[{{Pid}}]: " + formatter.SIMPLE_FORMAT
+
+// SplunkSourceType is the default splunk source type
 const SplunkSourceType = "syslog"
+
+// sessionKeyDuration is how long to use the same session key before requesting a new one.
 const sessionKeyDuration = time.Duration(time.Minute * 15)
 
+// All of the exported attribues are safe to replace before the handler has been added into a logger.
 type SplunkWriter struct {
 	url      *url.URL
 	username string
@@ -40,6 +59,16 @@ type SplunkWriter struct {
 	sessionKeyTime time.Time
 }
 
+// NewSplunkWriter constructs a new splunk writer.
+//
+// The URL parameter is the URL of the Splunk API endpoint (e.g. https://user:pass@splunk.example.com:8089), and must contain authentication credentials.
+// The URL may include a few query parameters which override default settings.
+// * Index - The index to send events to. Default: "default"
+// * SourceType - The source type to report log entries as. Default: "syslog"
+// * Hostname - The hostname to report as the origin of the log entries. Default: os.Hostname()
+// * Source - The source metadata parameter to send log entries with. Default: base(os.Argv[0])
+//
+// If the Splunk server uses https and has a cert not recognized by a standard certificate authority, you can use splunk.CACerts to add the CA/server certificate.
 func NewSplunkWriter(splunkURL string) (*SplunkWriter, error) {
 	sw := &SplunkWriter{}
 
@@ -108,6 +137,7 @@ func NewSplunkWriter(splunkURL string) (*SplunkWriter, error) {
 	return sw, nil
 }
 
+// login is responsible for obtaining a new sessionKey from the splunk server.
 func (sw *SplunkWriter) login() (string, error) {
 	splunkURL, _ := url.Parse(sw.url.String())
 	splunkURL.Path = splunkURL.Path + "services/auth/login"
@@ -140,6 +170,8 @@ func (sw *SplunkWriter) login() (string, error) {
 
 	return respData.SessionKey, nil
 }
+
+// getSessionKey will return the current session key, or obtain a new one if expired.
 func (sw *SplunkWriter) getSessionKey() (string, error) {
 	if sw.sessionKey == "" || sw.sessionKeyTime.Before(time.Now().Add(-sessionKeyDuration)) {
 		var err error
@@ -154,6 +186,7 @@ func (sw *SplunkWriter) getSessionKey() (string, error) {
 	return sw.sessionKey, nil
 }
 
+// Event processes an event and sends it to the splunk server.
 func (sw *SplunkWriter) Event(logEvent *event.Event) error {
 	splunkURL, _ := url.Parse(sw.url.String())
 	values := splunkURL.Query()

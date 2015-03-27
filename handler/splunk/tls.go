@@ -23,13 +23,20 @@ zj0EAwIDSQAwRgIhALMUgLYPtICN9ci/ZOoXeZxUhn3i4wIo2mPKEWX0IcfpAiEA
 -----END CERTIFICATE-----
 `
 
+// CACerts is an x509 cert pool used when the Splunk API endpoint is using HTTPS, and has a certificate not recognized by the standard certificate authorities.
+// You may add custom certificates to the pool, even after the handler has been instantiated.
 var CACerts = x509.NewCertPool()
+
+// TLSConfig is the config used by the splunk handler for unrecognized certificate authoritiess.
 var TLSConfig = &tls.Config{RootCAs: CACerts}
 
 func init() {
 	CACerts.AppendCertsFromPEM([]byte(splunkCloudCACert))
 }
 
+// getHttpsClient returns a http.Client for communication with the Splunk API endpoint.
+//
+// It connects to the specified address using the standard TLS configuration, and if successful, returns the http.DefaultClient. If unsuccessful it returns a new http.Client using the CACerts cert pool.
 func getHttpsClient(addr string) (*http.Client, error) {
 	conn, err := tls.Dial("tcp", addr, nil)
 	if err == nil {
@@ -40,6 +47,8 @@ func getHttpsClient(addr string) (*http.Client, error) {
 	return newHttpsClient(addr)
 }
 
+// newHttpsClient returns a http.Client using the CACerts cert pool.
+// Additionally, if the address is a Splunk cloud address, it strips the "input-" prefix from the address when doing certificate validation. This is because Splunk cloud uses the cert for the web dashboard on the API address (which uses a different host name).
 func newHttpsClient(addr string) (*http.Client, error) {
 	var tlsConfig = *TLSConfig
 

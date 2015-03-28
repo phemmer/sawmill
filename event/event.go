@@ -28,9 +28,8 @@ var levelNames = [8]string{
 	"Emergency",
 }
 
-// LevelName converts a level into its textual representation.
-func LevelName(level Level) string {
-	return levelNames[level]
+func (l Level) String() string {
+	return levelNames[l]
 }
 
 type Event struct {
@@ -59,9 +58,4 @@ func NewEvent(id uint64, level Level, message string, fields interface{}) *Event
 	}
 
 	return event
-}
-
-// LevelName returns the textual representation of the level name for the event.
-func (event *Event) LevelName() string {
-	return LevelName(event.Level)
 }

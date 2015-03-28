@@ -61,7 +61,7 @@ func (formatter *Formatter) Time(format string) string {
 
 // Level converts the event's level into a string.
 func (formatter *Formatter) Level() string {
-	return formatter.Event.LevelName()
+	return formatter.Event.Level.String()
 }
 
 // Color wraps the given text in ANSI color escapes appropriate to the event's level.

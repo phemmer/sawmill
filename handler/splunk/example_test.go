@@ -12,7 +12,7 @@ func Example() {
 
 	logger := sawmill.DefaultLogger()
 
-	handler, err := splunk.NewSplunkWriter(splunkURL)
+	handler, err := splunk.New(splunkURL)
 	if err != nil {
 		logger.Fatal("Unable to initialize splunk", sawmill.Fields{"error": err})
 	}

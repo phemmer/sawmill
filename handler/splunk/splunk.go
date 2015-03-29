@@ -42,7 +42,7 @@ const SplunkSourceType = "syslog"
 const sessionKeyDuration = time.Duration(time.Minute * 15)
 
 // All of the exported attribues are safe to replace before the handler has been added into a logger.
-type SplunkWriter struct {
+type SplunkHandler struct {
 	url      *url.URL
 	username string
 	password string
@@ -59,7 +59,7 @@ type SplunkWriter struct {
 	sessionKeyTime time.Time
 }
 
-// NewSplunkWriter constructs a new splunk writer.
+// New constructs a new splunk handler.
 //
 // The URL parameter is the URL of the Splunk API endpoint (e.g. https://user:pass@splunk.example.com:8089), and must contain authentication credentials.
 // The URL may include a few query parameters which override default settings.
@@ -69,8 +69,8 @@ type SplunkWriter struct {
 // * Source - The source metadata parameter to send log entries with. Default: base(os.Argv[0])
 //
 // If the Splunk server uses https and has a cert not recognized by a standard certificate authority, you can use splunk.CACerts to add the CA/server certificate.
-func NewSplunkWriter(splunkURL string) (*SplunkWriter, error) {
-	sw := &SplunkWriter{}
+func New(splunkURL string) (*SplunkHandler, error) {
+	sw := &SplunkHandler{}
 
 	var err error
 	sw.url, err = url.Parse(splunkURL)
@@ -138,7 +138,7 @@ func NewSplunkWriter(splunkURL string) (*SplunkWriter, error) {
 }
 
 // login is responsible for obtaining a new sessionKey from the splunk server.
-func (sw *SplunkWriter) login() (string, error) {
+func (sw *SplunkHandler) login() (string, error) {
 	splunkURL, _ := url.Parse(sw.url.String())
 	splunkURL.Path = splunkURL.Path + "services/auth/login"
 
@@ -172,7 +172,7 @@ func (sw *SplunkWriter) login() (string, error) {
 }
 
 // getSessionKey will return the current session key, or obtain a new one if expired.
-func (sw *SplunkWriter) getSessionKey() (string, error) {
+func (sw *SplunkHandler) getSessionKey() (string, error) {
 	if sw.sessionKey == "" || sw.sessionKeyTime.Before(time.Now().Add(-sessionKeyDuration)) {
 		var err error
 		sw.sessionKey, err = sw.login()
@@ -187,7 +187,7 @@ func (sw *SplunkWriter) getSessionKey() (string, error) {
 }
 
 // Event processes an event and sends it to the splunk server.
-func (sw *SplunkWriter) Event(logEvent *event.Event) error {
+func (sw *SplunkHandler) Event(logEvent *event.Event) error {
 	splunkURL, _ := url.Parse(sw.url.String())
 	values := splunkURL.Query()
 	values.Set("host", sw.Hostname)

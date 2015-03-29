@@ -15,7 +15,7 @@ func Example() {
 	logger := sawmill.NewLogger()
 	defer logger.Stop()
 
-	writer, err := writer.NewEventWriter(os.Stdout, formatter.SIMPLE_FORMAT)
+	writer, err := writer.New(os.Stdout, formatter.SIMPLE_FORMAT)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

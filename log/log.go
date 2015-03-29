@@ -102,7 +102,7 @@ type Logger struct {
 func New(out io.Writer, prefix string, flag int) *Logger {
 	sml := sm.NewLogger()
 
-	handler, _ := writer.NewEventWriter(out, formatter.CONSOLE_NOCOLOR_FORMAT)
+	handler, _ := writer.New(out, formatter.CONSOLE_NOCOLOR_FORMAT)
 
 	sml.AddHandler("logwriter", handler)
 

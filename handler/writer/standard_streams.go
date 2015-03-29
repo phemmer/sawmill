@@ -6,14 +6,14 @@ import (
 	"os"
 )
 
-type standardStreamsWriter struct {
-	stdoutWriter *EventWriter
-	stderrWriter *EventWriter
+type standardStreamsHandler struct {
+	stdoutWriter *WriterHandler
+	stderrWriter *WriterHandler
 }
 
-// NewStandardStreamsWriter is a convenience function for constructing a new writer which sends to STDOUT/STDERR.
+// NewStandardStreamsHandler is a convenience function for constructing a new handler which sends to STDOUT/STDERR.
 // If the output is sent to a TTY, the format is formatter.CONSOLE_COLOR_FORMAT. Otherwise it is formatter.CONSOLE_NOCOLOR_FORMAT. The only difference between the two are the use of color escape codes.
-func NewStandardStreamsWriter() *standardStreamsWriter {
+func NewStandardStreamsHandler() *standardStreamsHandler {
 	var stdoutFormat, stderrFormat string
 	if IsTerminal(os.Stdout) {
 		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
@@ -26,21 +26,21 @@ func NewStandardStreamsWriter() *standardStreamsWriter {
 		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
 	}
 
-	writer := &standardStreamsWriter{}
+	handler := &standardStreamsHandler{}
 
 	// Discard the errors in the following.
 	// The only possible issue is if the template has format errors, and we're using the default, which is hard-coded.
-	writer.stdoutWriter, _ = NewEventWriter(os.Stdout, stdoutFormat)
-	writer.stderrWriter, _ = NewEventWriter(os.Stderr, stderrFormat)
+	handler.stdoutWriter, _ = New(os.Stdout, stdoutFormat)
+	handler.stderrWriter, _ = New(os.Stderr, stderrFormat)
 
-	return writer
+	return handler
 }
 
 // Event accepts an event and sends it to the appropriate output stream based on the event's level.
 // If the level is warning or higher, it is sent to STDERR. Otherwise it is sent to STDOUT.
-func (writer *standardStreamsWriter) Event(logEvent *event.Event) error {
+func (handler *standardStreamsHandler) Event(logEvent *event.Event) error {
 	if logEvent.Level >= event.Warning {
-		return writer.stderrWriter.Event(logEvent)
+		return handler.stderrWriter.Event(logEvent)
 	}
-	return writer.stdoutWriter.Event(logEvent)
+	return handler.stdoutWriter.Event(logEvent)
 }

@@ -20,16 +20,16 @@ func IsTerminal(stream interface {
 	return terminal.IsTerminal(int(stream.Fd()))
 }
 
-// EventWriter is responsible for converting an event into text using a template, and then sending that text to an io.Writer.
-type EventWriter struct {
+// WriterHandler is responsible for converting an event into text using a template, and then sending that text to an io.Writer.
+type WriterHandler struct {
 	Output   io.Writer
 	Template *template.Template
 }
 
-// NewEventWriter constructs a new EventWriter.
+// New constructs a new WriterHandler handler.
 // templateString must be a template supported by the sawmill/event/formatter package.
-// If the templateString is empty, the EventWriter will use sawmill/event/formatter.SIMPLE_FORMAT.
-func NewEventWriter(output io.Writer, templateString string) (*EventWriter, error) {
+// If the templateString is empty, the WriterHandler will use sawmill/event/formatter.SIMPLE_FORMAT.
+func New(output io.Writer, templateString string) (*WriterHandler, error) {
 	if templateString == "" {
 		templateString = formatter.SIMPLE_FORMAT
 	}
@@ -38,20 +38,20 @@ func NewEventWriter(output io.Writer, templateString string) (*EventWriter, erro
 		fmt.Printf("Error parsing template: %s", err) //TODO send message somewhere else?
 		return nil, err
 	}
-	ewriter := &EventWriter{
+	handler := &WriterHandler{
 		Output:   output,
 		Template: formatterTemplate,
 	}
-	return ewriter, nil
+	return handler, nil
 }
 
-// Event accepts an event, formats it, and writes it to the EventWriter's Output.
-func (ewriter *EventWriter) Event(logEvent *event.Event) error {
-	//ewriter.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
+// Event accepts an event, formats it, and writes it to the WriterHandler's Output.
+func (handler *WriterHandler) Event(logEvent *event.Event) error {
+	//handler.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer
-	ewriter.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+	handler.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
 	templateBuffer.WriteByte('\n')
-	ewriter.Output.Write(templateBuffer.Bytes())
+	handler.Output.Write(templateBuffer.Bytes())
 
 	return nil
 }

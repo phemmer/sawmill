@@ -136,7 +136,7 @@ func (logger *Logger) InitStdStreams() {
 //
 // The handler is added with the name 'syslog'
 func (logger *Logger) InitStdSyslog() error {
-	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
+	syslogHandler, err := syslog.New("", "", 0, "")
 	if err != nil {
 		return err
 	}

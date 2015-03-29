@@ -64,7 +64,7 @@ var levelPriorityMap map[event.Level]level = map[event.Level]level{
 	event.Emergency: EMERG,
 }
 
-type SyslogWriter struct {
+type SyslogHandler struct {
 	syslogProtocol   string
 	syslogAddr       string
 	syslogConnection net.Conn
@@ -74,7 +74,7 @@ type SyslogWriter struct {
 	Template         *template.Template
 }
 
-// NewSyslogWriter attempts to connect to syslog, and returns a new SyslogWriter if successful.
+// New attempts to connect to syslog, and returns a new SyslogHandler if successful.
 //
 // protocol is a "network" as defined by the net package. Commonly either "unix" or "unixgram". See net.Dial for available values. Defaults to "unix" if emtpy.
 //
@@ -83,7 +83,7 @@ type SyslogWriter struct {
 // facility is the syslog facility to use for all events processed through this handler. Defaults to USER.
 //
 // templateString is the sawmill/event/formatter compatable template to use for formatting events. Defaults to formatter.SIMPLE_FORMAT.
-func NewSyslogWriter(protocol string, addr string, facility facility, templateString string) (*SyslogWriter, error) {
+func New(protocol string, addr string, facility facility, templateString string) (*SyslogHandler, error) {
 	tag := path.Base(os.Args[0])
 
 	if facility == 0 {
@@ -101,7 +101,7 @@ func NewSyslogWriter(protocol string, addr string, facility facility, templateSt
 
 	hostname, _ := os.Hostname()
 
-	sw := &SyslogWriter{
+	sw := &SyslogHandler{
 		syslogProtocol: protocol,
 		syslogAddr:     addr,
 		syslogHostname: hostname,
@@ -120,7 +120,7 @@ func NewSyslogWriter(protocol string, addr string, facility facility, templateSt
 
 // dial is based on log/syslog.Dial().
 // It was copied out as log/syslog.Dial() doesn't properly use the basename of ARGV[0].
-func (sw *SyslogWriter) dial() error {
+func (sw *SyslogHandler) dial() error {
 	if sw.syslogConnection != nil {
 		sw.syslogConnection.Close()
 		sw.syslogConnection = nil
@@ -158,13 +158,13 @@ func (sw *SyslogWriter) dial() error {
 
 // Event accepts an event and writes it out to the syslog daemon.
 // If the connection was lost, the function will attempt to reconnect once.
-func (sw *SyslogWriter) Event(logEvent *event.Event) error {
+func (sw *SyslogHandler) Event(logEvent *event.Event) error {
 	var templateBuffer bytes.Buffer
 	sw.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
 	return sw.sendMessage(logEvent, templateBuffer.Bytes())
 }
 
-func (sw *SyslogWriter) sendMessage(event *event.Event, message []byte) error {
+func (sw *SyslogHandler) sendMessage(event *event.Event, message []byte) error {
 	priority := int(sw.syslogFacility) | int(levelPriorityMap[event.Level])
 	timestamp := event.Time.Format(time.StampMilli) // this is the BSD syslog format. IETF syslog format is better, but is still relatively new.
 	tag := sw.syslogTag

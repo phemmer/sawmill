@@ -2,7 +2,6 @@ package writer
 
 import (
 	"github.com/phemmer/sawmill/event"
-	"github.com/phemmer/sawmill/event/formatter"
 	"os"
 )
 
@@ -12,18 +11,18 @@ type standardStreamsHandler struct {
 }
 
 // NewStandardStreamsHandler is a convenience function for constructing a new handler which sends to STDOUT/STDERR.
-// If the output is sent to a TTY, the format is formatter.CONSOLE_COLOR_FORMAT. Otherwise it is formatter.CONSOLE_NOCOLOR_FORMAT. The only difference between the two are the use of color escape codes.
+// If the output is sent to a TTY, the format is event.ConsoleColorFormat. Otherwise it is event.ConsoleNocolorFormat. The only difference between the two are the use of color escape codes.
 func NewStandardStreamsHandler() *standardStreamsHandler {
 	var stdoutFormat, stderrFormat string
 	if IsTerminal(os.Stdout) {
-		stdoutFormat = formatter.CONSOLE_COLOR_FORMAT
+		stdoutFormat = event.ConsoleColorFormat
 	} else {
-		stdoutFormat = formatter.CONSOLE_NOCOLOR_FORMAT
+		stdoutFormat = event.ConsoleNocolorFormat
 	}
 	if IsTerminal(os.Stderr) {
-		stderrFormat = formatter.CONSOLE_COLOR_FORMAT
+		stderrFormat = event.ConsoleColorFormat
 	} else {
-		stderrFormat = formatter.CONSOLE_NOCOLOR_FORMAT
+		stderrFormat = event.ConsoleNocolorFormat
 	}
 
 	handler := &standardStreamsHandler{}

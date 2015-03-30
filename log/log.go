@@ -14,7 +14,7 @@ import (
 	"sync"
 
 	sm "github.com/phemmer/sawmill"
-	"github.com/phemmer/sawmill/event/formatter"
+	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/handler/writer"
 )
 
@@ -102,7 +102,7 @@ type Logger struct {
 func New(out io.Writer, prefix string, flag int) *Logger {
 	sml := sm.NewLogger()
 
-	handler, _ := writer.New(out, formatter.CONSOLE_NOCOLOR_FORMAT)
+	handler, _ := writer.New(out, event.ConsoleNocolorFormat)
 
 	sml.AddHandler("logwriter", handler)
 

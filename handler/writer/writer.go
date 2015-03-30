@@ -6,11 +6,13 @@ package writer
 import (
 	"bytes"
 	"fmt"
-	"github.com/phemmer/sawmill/event"
-	"github.com/phemmer/sawmill/event/formatter"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
+	"os"
 	"text/template"
+
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/phemmer/sawmill/event"
 )
 
 // IsTerminal returns whether the given stream (File) is attached to a TTY.
@@ -27,13 +29,13 @@ type WriterHandler struct {
 }
 
 // New constructs a new WriterHandler handler.
-// templateString must be a template supported by the sawmill/event/formatter package.
-// If the templateString is empty, the WriterHandler will use sawmill/event/formatter.SIMPLE_FORMAT.
+// templateString must be a template supported by the sawmill/event package.
+// If the templateString is empty, the WriterHandler will use sawmill/event.SimpleFormat.
 func New(output io.Writer, templateString string) (*WriterHandler, error) {
 	if templateString == "" {
-		templateString = formatter.SIMPLE_FORMAT
+		templateString = event.SimpleFormat
 	}
-	formatterTemplate, err := template.New("").Parse(templateString)
+	formatterTemplate, err := event.NewTemplate("", templateString)
 	if err != nil {
 		fmt.Printf("Error parsing template: %s", err) //TODO send message somewhere else?
 		return nil, err
@@ -49,7 +51,11 @@ func New(output io.Writer, templateString string) (*WriterHandler, error) {
 func (handler *WriterHandler) Event(logEvent *event.Event) error {
 	//handler.Output.Write([]byte(fmt.Sprintf("%#v\n", event)))
 	var templateBuffer bytes.Buffer
-	handler.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+	err := handler.Template.Execute(&templateBuffer, logEvent)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return err
+	}
 	templateBuffer.WriteByte('\n')
 	handler.Output.Write(templateBuffer.Bytes())
 

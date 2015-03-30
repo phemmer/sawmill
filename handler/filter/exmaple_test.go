@@ -6,7 +6,7 @@ import (
 
 	// TODO way too many imports for such a simple example
 	"github.com/phemmer/sawmill"
-	"github.com/phemmer/sawmill/event/formatter"
+	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/handler/filter"
 	"github.com/phemmer/sawmill/handler/writer"
 )
@@ -15,7 +15,7 @@ func Example() {
 	logger := sawmill.NewLogger()
 	defer logger.Stop()
 
-	writer, err := writer.New(os.Stdout, formatter.SIMPLE_FORMAT)
+	writer, err := writer.New(os.Stdout, event.SimpleFormat)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

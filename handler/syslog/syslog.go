@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/phemmer/sawmill/event"
-	"github.com/phemmer/sawmill/event/formatter"
 	"net"
 	"os"
 	"path"
@@ -82,7 +81,7 @@ type SyslogHandler struct {
 //
 // facility is the syslog facility to use for all events processed through this handler. Defaults to USER.
 //
-// templateString is the sawmill/event/formatter compatable template to use for formatting events. Defaults to formatter.SIMPLE_FORMAT.
+// templateString is the sawmill/event compatable template to use for formatting events. Defaults to event.SimpleFormat.
 func New(protocol string, addr string, facility facility, templateString string) (*SyslogHandler, error) {
 	tag := path.Base(os.Args[0])
 
@@ -91,7 +90,7 @@ func New(protocol string, addr string, facility facility, templateString string)
 	}
 
 	if templateString == "" {
-		templateString = formatter.SIMPLE_FORMAT
+		templateString = event.SimpleFormat
 	}
 	formatterTemplate, err := template.New("").Parse(templateString)
 	if err != nil {
@@ -160,7 +159,7 @@ func (sw *SyslogHandler) dial() error {
 // If the connection was lost, the function will attempt to reconnect once.
 func (sw *SyslogHandler) Event(logEvent *event.Event) error {
 	var templateBuffer bytes.Buffer
-	sw.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+	sw.Template.Execute(&templateBuffer, logEvent)
 	return sw.sendMessage(logEvent, templateBuffer.Bytes())
 }
 

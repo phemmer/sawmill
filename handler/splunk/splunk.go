@@ -28,12 +28,11 @@ import (
 	"time"
 
 	"github.com/phemmer/sawmill/event"
-	"github.com/phemmer/sawmill/event/formatter"
 )
 
 // SplunkFormat is the default template format.
 // It is meant to work with the 'syslog' splunk sourcetype, such that the splunk field extraction matches most of the headers. The only header not properly parsed is the level.
-const SplunkFormat = "{{.Time \"2006-01-02 15:04:05.000 -0700\"}} {{.Level}}({{.Event.Level}}) {{Source}}[{{Pid}}]: " + formatter.SIMPLE_FORMAT
+const SplunkFormat = "{{.Time.Format \"2006-01-02 15:04:05.000 -0700\"}} {{.Level}}({{.Level.Int}}) {{Source}}[{{Pid}}]: " + event.SimpleFormat
 
 // SplunkSourceType is the default splunk source type
 const SplunkSourceType = "syslog"
@@ -116,7 +115,7 @@ func New(splunkURL string) (*SplunkHandler, error) {
 		"Source":   func() string { return sw.Source },
 		"Pid":      os.Getpid,
 	}
-	sw.Template.Funcs(funcMap)
+	sw.Template.Funcs(funcMap).Funcs(event.TemplateFuncs)
 	if _, err := sw.Template.Parse(SplunkFormat); err != nil {
 		return nil, fmt.Errorf("unable to parse template: %s", err)
 	}
@@ -203,7 +202,7 @@ func (sw *SplunkHandler) Event(logEvent *event.Event) error {
 	}
 
 	var templateBuffer bytes.Buffer
-	sw.Template.Execute(&templateBuffer, formatter.EventFormatter(logEvent))
+	sw.Template.Execute(&templateBuffer, logEvent)
 	eventBytes := templateBuffer.Bytes()
 	eventBytes = bytes.Replace(eventBytes, []byte{'\n'}, []byte{'\r'}, -1)
 

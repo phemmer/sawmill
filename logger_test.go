@@ -132,7 +132,7 @@ func TestLoggerHelpers(t *testing.T) {
 			assert.Equal(t, logEvent.Level, helper.Level)
 
 			if assert.NotNil(t, logEvent.Fields) {
-				assert.Equal(t, logEvent.FlatFields["helper"], helper.String)
+				assert.Equal(t, logEvent.Fields["helper"], helper.String)
 			}
 		}
 	}
@@ -166,7 +166,7 @@ func TestLoggerFatal(t *testing.T) {
 		assert.Equal(t, logEvent.Message, "TestHelper Fatal")
 
 		if assert.NotNil(t, logEvent.Fields) {
-			assert.Equal(t, logEvent.FlatFields["helper"], "Fatal")
+			assert.Equal(t, logEvent.Fields["helper"], "Fatal")
 		}
 	}
 

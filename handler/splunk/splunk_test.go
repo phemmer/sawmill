@@ -1,6 +1,7 @@
 package splunk
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
@@ -118,6 +119,7 @@ func TestEvent(t *testing.T) {
 	assert.Equal(t, sw.SourceType, serverEvent.sourcetype)
 	assert.Contains(t, serverEvent.message, logEvent.Message)
 	assert.Contains(t, serverEvent.message, "test=TestEvent")
+	assert.Contains(t, serverEvent.message, fmt.Sprintf("Warning(3)"))
 }
 
 func TestNewHttpsClient_splunkCloudHostname(t *testing.T) {

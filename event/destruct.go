@@ -65,9 +65,17 @@ func deStructPointer(dataValue reflect.Value) (interface{}, interface{}, map[str
 	// this is since the original value was a pointer, for the copy we return a pointer as well
 	// We can't just `return &dataCopy` as `dataCopy` is an `interface{}`, so this would return a pointer to an interface rather than a pointer to the copy itself
 	dataCopyValue := reflect.ValueOf(dataCopy)
-	dataCopyPtrValue := reflect.New(dataCopyValue.Type())
-	dataCopyPtrValue.Elem().Set(dataCopyValue)
-	return dataCopyPtrValue.Interface(), dataScalar, flatFields
+	var dataCopyPtr interface{}
+	if dataCopyValue.IsValid() {
+		dataCopyPtrValue := reflect.New(dataCopyValue.Type())
+		dataCopyPtrValue.Elem().Set(dataCopyValue)
+		dataCopyPtr = dataCopyPtrValue.Interface()
+	} else {
+		// copy is invalid (likely zero value)
+		// return a zero-value of the same type as the original instead
+		dataCopyPtr = reflect.Zero(dataValue.Type()).Interface()
+	}
+	return dataCopyPtr, dataScalar, flatFields
 }
 func deStructInterface(dataValue reflect.Value) (interface{}, interface{}, map[string]interface{}) {
 	return deStructValue(dataValue.Elem())

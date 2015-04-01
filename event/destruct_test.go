@@ -42,7 +42,15 @@ func (be *int64PointerErrorer) Error() string {
 	return "ERROR"
 }
 
+var nilPointer *bool
+
 var tests = []test{
+	// {
+	//   input,
+	//   copy,
+	//   scalar,
+	//   fields,
+	// },
 	{
 		nil,
 		nil,
@@ -77,6 +85,12 @@ var tests = []test{
 		"foo",
 		"foo",
 		"foo",
+		map[string]interface{}{},
+	},
+	{
+		nilPointer,
+		nilPointer,
+		nil,
 		map[string]interface{}{},
 	},
 	{

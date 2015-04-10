@@ -12,34 +12,34 @@ import (
 	"github.com/phemmer/sawmill/event"
 )
 
-func TestNewSplunkWriter_http(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpSvr))
+func TestNew_http(t *testing.T) {
+	sw, err := New(splunkURL(splunkHttpSvr))
 	assert.NoError(t, err)
 	assert.NotNil(t, sw)
 }
-func TestNewSplunkWriter_https(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpsSvr))
+func TestNew_https(t *testing.T) {
+	sw, err := New(splunkURL(splunkHttpsSvr))
 	assert.NoError(t, err)
 	assert.NotNil(t, sw)
 }
 
-func TestNewSplunkWriter_noUser(t *testing.T) {
+func TestNew_noUser(t *testing.T) {
 	u, err := url.Parse(splunkURL(splunkHttpSvr))
 	require.NoError(t, err)
 	u.User = nil
-	_, err = NewSplunkWriter(u.String())
+	_, err = New(u.String())
 	assert.Error(t, err)
 }
 
-func TestNewSplunkWriter_badUser(t *testing.T) {
+func TestNew_badUser(t *testing.T) {
 	u, err := url.Parse(splunkURL(splunkHttpSvr))
 	require.NoError(t, err)
 	u.User = url.UserPassword("foo", "bar")
-	_, err = NewSplunkWriter(u.String())
+	_, err = New(u.String())
 	assert.Error(t, err)
 }
 
-func TestNewSplunkWriter_queryParams(t *testing.T) {
+func TestNew_queryParams(t *testing.T) {
 	u, err := url.Parse(splunkURL(splunkHttpSvr))
 	require.NoError(t, err)
 
@@ -50,7 +50,7 @@ func TestNewSplunkWriter_queryParams(t *testing.T) {
 	values.Set("source", "foo4")
 	u.RawQuery = values.Encode()
 
-	sw, err := NewSplunkWriter(u.String())
+	sw, err := New(u.String())
 	assert.NoError(t, err)
 
 	assert.Equal(t, "foo1", sw.Index)
@@ -60,7 +60,7 @@ func TestNewSplunkWriter_queryParams(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkURL(splunkHttpsSvr))
 	require.NoError(t, err)
 
 	key, err := sw.login()
@@ -72,7 +72,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestGetSessionKey(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkURL(splunkHttpsSvr))
 	require.NoError(t, err)
 
 	sw.getSessionKey()
@@ -86,7 +86,7 @@ func TestGetSessionKey(t *testing.T) {
 }
 
 func TestGetSessionKey_expired(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkURL(splunkHttpsSvr))
 	require.NoError(t, err)
 
 	sw.getSessionKey()
@@ -103,7 +103,7 @@ func TestGetSessionKey_expired(t *testing.T) {
 }
 
 func TestEvent(t *testing.T) {
-	sw, err := NewSplunkWriter(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkURL(splunkHttpsSvr))
 	require.NoError(t, err)
 
 	logEvent := event.NewEvent(1, event.Warning, "testing Event()", map[string]interface{}{"test": "TestEvent"})

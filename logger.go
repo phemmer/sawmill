@@ -129,14 +129,14 @@ func (logger *Logger) Stop() {
 //
 // The handler is added with the name 'stdStreams'
 func (logger *Logger) InitStdStreams() {
-	logger.AddHandler("stdStreams", writer.NewStandardStreamsWriter())
+	logger.AddHandler("stdStreams", writer.NewStandardStreamsHandler())
 }
 
 // InitStdSyslog is a convenience function to register a syslog handler with the logger.
 //
 // The handler is added with the name 'syslog'
 func (logger *Logger) InitStdSyslog() error {
-	syslogHandler, err := syslog.NewSyslogWriter("", "", 0, "")
+	syslogHandler, err := syslog.New("", "", 0, "")
 	if err != nil {
 		return err
 	}

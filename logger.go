@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/filter"
 	"github.com/phemmer/sawmill/handler/syslog"
 	"github.com/phemmer/sawmill/handler/writer"
 )
@@ -24,6 +25,7 @@ type Handler interface {
 
 type eventHandlerSpec struct {
 	name          string
+	handler       Handler
 	eventChannel  chan *event.Event
 	finishChannel chan bool
 
@@ -50,12 +52,15 @@ func NewLogger() *Logger {
 }
 
 // AddHandler registers a new destination handler with the logger.
+//
 // The name parameter is a unique identifier so that the handler can be targeted with RemoveHandler().
+//
 // If a handler with the same name already exists, it will be replaced by the new one.
+// During replacement, the function will block waiting for any pending events to be flushed to the old handler.
 func (logger *Logger) AddHandler(name string, handler Handler) {
-	//TODO check name collision
 	spec := &eventHandlerSpec{
 		name:                     name,
+		handler:                  handler,
 		eventChannel:             make(chan *event.Event, 100),
 		finishChannel:            make(chan bool, 1),
 		lastProcessedEventIdCond: sync.NewCond(&sync.Mutex{}),
@@ -65,8 +70,21 @@ func (logger *Logger) AddHandler(name string, handler Handler) {
 	go handlerDriver(spec, handler, &logger.waitgroup)
 
 	logger.mutex.Lock()
+	oldSpec := logger.eventHandlerMap[name]
 	logger.eventHandlerMap[name] = spec
 	logger.mutex.Unlock()
+
+	//TODO we need a way to leave the handler in the map while letting it drain.
+	// With the current code, we remove the handler and wait. But if someone
+	// calls Sync(), it won't know about this handler any more.
+	//
+	// We could add the handler into the map under an alternate name, and remove
+	// it once drained.
+	// Or we could have 2 maps. Add another one for "pending removal" handlers.
+	if oldSpec != nil {
+		oldSpec.eventChannel <- nil
+		<-oldSpec.finishChannel
+	}
 }
 func handlerDriver(spec *eventHandlerSpec, handler Handler, waitgroup *sync.WaitGroup) {
 	defer waitgroup.Done()
@@ -107,6 +125,29 @@ func (logger *Logger) RemoveHandler(name string, wait bool) {
 		return
 	}
 	<-eventHandlerSpec.finishChannel
+}
+
+// GetHandler retrieves the handler with the given name.
+// Returns nil if no such handler exists.
+func (logger *Logger) GetHandler(name string) Handler {
+	logger.mutex.RLock()
+	handlerSpec := logger.eventHandlerMap[name]
+	logger.mutex.RUnlock()
+
+	if handlerSpec == nil {
+		return nil
+	}
+	return handlerSpec.handler
+}
+
+// FilterHandler is a convience wrapper for filter.New().
+//
+// Example usage:
+//  stdStreamsHandler := logger.GetHandler("stdStreams")
+//  stdStreamsHandler = logger.FilterHandler(stdStreamsHandler).LevelMin(sawmill.ErrorLevel)
+//  logger.AddHandler("stdStreams", stdStreamsHandler)
+func (logger *Logger) FilterHandler(handler Handler, filterFuncs ...filter.FilterFunc) *filter.FilterHandler {
+	return filter.New(handler, filterFuncs...)
 }
 
 // Stop removes all destination handlers on the logger, and waits for any pending events to flush out.

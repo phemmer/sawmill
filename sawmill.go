@@ -21,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/filter"
 )
 
 // these are copied here for convenience
@@ -59,6 +60,52 @@ func DefaultLogger() *Logger {
 	logger = loggerValue.(*Logger)
 
 	return logger
+}
+
+// AddHandler registers a new destination handler with the logger.
+//
+// The name parameter is a unique identifier so that the handler can be targeted with RemoveHandler().
+//
+// If a handler with the same name already exists, it will be replaced by the new one.
+// During replacement, the function will block waiting for any pending events to be flushed to the old handler.
+func AddHandler(name string, handler Handler) {
+	DefaultLogger().AddHandler(name, handler)
+}
+
+// RemoveHandler removes the named handler from the logger, preventing any further events from being sent to it.
+// The wait parameter will result in the function blocking until all events queued for the handler have finished processing.
+func RemoveHandler(name string, wait bool) {
+	DefaultLogger().RemoveHandler(name, wait)
+}
+
+// GetHandler retrieves the handler with the given name.
+// Returns nil if no such handler exists.
+func GetHandler(name string) Handler {
+	return DefaultLogger().GetHandler(name)
+}
+
+// FilterHandler is a convience wrapper for filter.New().
+//
+// Example usage:
+//  stdStreamsHandler := sawmill.GetHandler("stdStreams")
+//  stdStreamsHandler = sawmill.FilterHandler(stdStreamsHandler).LevelMin(sawmill.ErrorLevel)
+//  sawmill.AddHandler("stdStreams", stdStreamsHandler)
+func FilterHandler(handler Handler, filterFuncs ...filter.FilterFunc) *filter.FilterHandler {
+	return DefaultLogger().FilterHandler(handler, filterFuncs...)
+}
+
+// InitStdStreams is a convience function to register a STDOUT/STDERR handler with the logger.
+//
+// The is automatically invoked on the default package level logger, and should not normally be called.
+func InitStdStreams() {
+	DefaultLogger().InitStdStreams()
+}
+
+// InitStdSyslog is a convenience function to register a syslog handler with the logger.
+//
+// The handler is added with the name 'syslog'
+func InitStdSyslog() error {
+	return DefaultLogger().InitStdSyslog()
 }
 
 // Event queues a message at the given level.

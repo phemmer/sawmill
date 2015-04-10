@@ -6,23 +6,29 @@ The filter itself is just a handler which sits in front of another handler. When
 package filter
 
 import (
-	"github.com/phemmer/sawmill"
 	"github.com/phemmer/sawmill/event"
 )
+
+// Handler represents a destination for sawmill to send events to.
+//
+// This is copied from the base sawmill package. Sawmill is not imported so that the base package can import the filter package without a dependency cycle.
+type Handler interface {
+	Event(event *event.Event) error
+}
 
 // FilterFunc is the signature for a filter used by the handler.
 // The function returns `true` to indicate the event should be allowed, and `false` to indicate it should be dropped.
 type FilterFunc func(*event.Event) bool
 
 type FilterHandler struct {
-	nextHandler sawmill.Handler
+	nextHandler Handler
 	filterFuncs []FilterFunc
 }
 
 // New creates a new FilterHandler which relays events to the handler specified in `nextHandler`.
 //
 // If any filterFuncs are provided, they are used as the initial filter list.
-func New(nextHandler sawmill.Handler, filterFuncs ...FilterFunc) *FilterHandler {
+func New(nextHandler Handler, filterFuncs ...FilterFunc) *FilterHandler {
 	return &FilterHandler{
 		nextHandler: nextHandler,
 		filterFuncs: filterFuncs,

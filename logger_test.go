@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/filter"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -95,6 +96,15 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 
 	assert.Nil(t, handler1.Next(time.Millisecond))
 	assert.NotNil(t, handler2.Next(time.Millisecond))
+}
+
+func TestLoggerFilterHandler(t *testing.T) {
+	logger := NewLogger()
+
+	channelHandler := NewChannelHandler()
+
+	handler := logger.FilterHandler(channelHandler)
+	assert.IsType(t, &filter.FilterHandler{}, handler)
 }
 
 func TestLoggerHelpers(t *testing.T) {

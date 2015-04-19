@@ -38,6 +38,7 @@ type eventHandlerSpec struct {
 // The logger tracks a list of destinations, and when given an event, will asynchronously send that event to all registered destination handlers.
 type Logger struct {
 	eventHandlerMap map[string]*eventHandlerSpec
+	stackMinLevel   int32 // we store this as int32 instead of event.Level so that we can use atomic
 	mutex           sync.RWMutex
 	waitgroup       sync.WaitGroup
 	lastEventId     uint64
@@ -45,10 +46,26 @@ type Logger struct {
 
 // NewLogger constructs a Logger.
 // The new Logger will not have any registered handlers.
+//
+// By default events will not include a stack trace. If any destination
+// handler makes use of a stack trace, call SetStackMinLevel on the logger.
 func NewLogger() *Logger {
 	return &Logger{
 		eventHandlerMap: make(map[string]*eventHandlerSpec),
+		stackMinLevel:   int32(event.Emergency) + 1,
 	}
+}
+
+// SetStackMinLevel sets the minimum level at which to include a stack trace
+// in events.
+func (logger *Logger) SetStackMinLevel(level event.Level) {
+	atomic.StoreInt32(&logger.stackMinLevel, int32(level))
+}
+
+// GetStackMinLevel gets the minimum level at which to include a stack trace
+// in events.
+func (logger *Logger) GetStackMinLevel() event.Level {
+	return event.Level(atomic.LoadInt32(&logger.stackMinLevel))
 }
 
 // AddHandler registers a new destination handler with the logger.
@@ -199,8 +216,10 @@ func (logger *Logger) Event(level event.Level, message string, fields ...interfa
 		eventFields = nil
 	}
 
+	getStack := int32(level) >= atomic.LoadInt32(&logger.stackMinLevel)
 	eventId := atomic.AddUint64(&logger.lastEventId, 1)
-	logEvent := event.NewEvent(eventId, level, message, eventFields)
+	logEvent := event.NewEvent(eventId, level, message, eventFields, getStack)
+
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
 		if true { //TODO make dropping configurable per-handler

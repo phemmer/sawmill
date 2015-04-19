@@ -229,5 +229,37 @@ func TestSync(t *testing.T) {
 	}
 }
 
+func TestSetStackMinLevel(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	handler := NewChannelHandler()
+	logger.AddHandler("TestSetStackMinLevel", handler)
+	logger.SetStackMinLevel(ErrorLevel)
+
+	logger.Warning("foo")
+	logEvent := handler.Next(time.Second)
+	assert.Empty(t, logEvent.Stack)
+
+	logger.Error("bar")
+	logEvent = handler.Next(time.Second)
+	assert.NotEmpty(t, logEvent.Stack)
+	// Unfortunately we can't (easily) test that the stack trace includes this
+	// test function as event.NewEvent looks for the first function outside
+	// the sawmill package, and we're testing inside the package.
+	// However it should at least include the testing package as that's what
+	// called us.
+}
+
+func TestGetStackMinLevel(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	assert.True(t, logger.GetStackMinLevel() > EmergencyLevel)
+
+	logger.SetStackMinLevel(DebugLevel)
+	assert.Equal(t, DebugLevel, logger.GetStackMinLevel())
+}
+
 // Test dropping
 // Test Stop()

@@ -248,3 +248,19 @@ func TestDeStruct(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkDeStruct(b *testing.B) {
+	var outputCopy interface{}
+	var outputScalar interface{}
+	var outputFields map[string]interface{}
+
+	for i := 0; i < b.N; i++ {
+		for _, test := range tests {
+			outputCopy, outputScalar, outputFields = deStruct(test.input)
+		}
+	}
+
+	if false { // keep the compiler from complaining about unused variables
+		fmt.Printf("%v %v %v", outputCopy, outputScalar, outputFields)
+	}
+}

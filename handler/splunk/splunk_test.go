@@ -106,7 +106,7 @@ func TestEvent(t *testing.T) {
 	sw, err := New(splunkURL(splunkHttpsSvr))
 	require.NoError(t, err)
 
-	logEvent := event.NewEvent(1, event.Warning, "testing Event()", map[string]interface{}{"test": "TestEvent"})
+	logEvent := event.NewEvent(1, event.Warning, "testing Event()", map[string]interface{}{"test": "TestEvent"}, false)
 	err = sw.Event(logEvent)
 	assert.NoError(t, err)
 

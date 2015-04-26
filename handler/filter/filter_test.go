@@ -31,7 +31,7 @@ func makeEvent(level event.Level) *event.Event {
 	message := "testing " + callerName + "()"
 	data := map[string]interface{}{"test": callerName}
 
-	return event.NewEvent(eventCounter, level, message, data)
+	return event.NewEvent(eventCounter, level, message, data, false)
 }
 
 func TestEvent(t *testing.T) {

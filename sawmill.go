@@ -62,6 +62,18 @@ func DefaultLogger() *Logger {
 	return logger
 }
 
+// SetStackMinLevel sets the minimum level at which to include a stack trace
+// in events.
+func SetStackMinLevel(level event.Level) {
+	DefaultLogger().SetStackMinLevel(level)
+}
+
+// GetStackMinLevel gets the minimum level at which to include a stack trace
+// in events.
+func GetStackMinLevel() event.Level {
+	return DefaultLogger().GetStackMinLevel()
+}
+
 // AddHandler registers a new destination handler with the logger.
 //
 // The name parameter is a unique identifier so that the handler can be targeted with RemoveHandler().

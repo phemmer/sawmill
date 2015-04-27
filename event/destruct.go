@@ -49,12 +49,8 @@ func deStructValue(dataValue reflect.Value) (interface{}, interface{}, map[strin
 		}
 
 		if errorer, ok := dataValue.Interface().(error); ok {
-			errString := errorer.Error()
-			if dataScalar == nil && len(flatFields) == 0 {
-				dataScalar = errString
-			} else if dataScalar != errString {
-				flatFields["Error"] = errString
-			}
+			dataScalar = errorer.Error()
+			flatFields = map[string]interface{}{}
 		}
 	}
 

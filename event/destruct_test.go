@@ -180,14 +180,14 @@ var tests = []test{
 	{
 		int64Errorer(1234),
 		int64Errorer(1234),
-		int64(1234),
-		map[string]interface{}{"Error": "ERROR"},
+		"ERROR",
+		map[string]interface{}{},
 	},
 	{
 		func() *int64Errorer { v := int64Errorer(1234); return &v }(),
 		func() *int64Errorer { v := int64Errorer(1234); return &v }(),
-		int64(1234),
-		map[string]interface{}{"Error": "ERROR"},
+		"ERROR",
+		map[string]interface{}{},
 	},
 	{
 		errors.New("FOO"),
@@ -219,7 +219,7 @@ var tests = []test{
 		map[string]interface{}{"foo": map[string]int64Errorer{"bar": int64Errorer(1234), "baz": int64Errorer(0)}, "pop": "tart"},
 		map[interface{}]interface{}{"foo": map[interface{}]interface{}{"bar": int64Errorer(1234), "baz": int64Errorer(0)}, "pop": "tart"},
 		nil,
-		map[string]interface{}{"foo.bar": int64(1234), "foo.bar.Error": "ERROR", "foo.baz": int64(0), "foo.baz.Error": "ERROR", "pop": "tart"},
+		map[string]interface{}{"foo.bar": "ERROR", "foo.baz": "ERROR", "pop": "tart"},
 	},
 }
 

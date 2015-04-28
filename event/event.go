@@ -91,7 +91,16 @@ func newStackFrame(pc uintptr) *StackFrame {
 	if f == nil {
 		return nil
 	}
-	file, line := f.FileLine(pc)
+
+	// get the PC of the instruction, not the return
+	// https://github.com/golang/go/issues/5518
+	// https://play.golang.org/p/lTWpWsrIT3
+	linePC := pc
+	if linePC > f.Entry() {
+		linePC--
+	}
+
+	file, line := f.FileLine(linePC)
 	fSplit := strings.SplitN(path.Base(f.Name()), ".", 2)
 	pkg, fun := fSplit[0], fSplit[1]
 	return &StackFrame{

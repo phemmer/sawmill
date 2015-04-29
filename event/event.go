@@ -83,6 +83,7 @@ type StackFrame struct {
 	Line     int
 	Function string
 	Func     string
+	Package  string
 }
 
 func newStackFrame(pc uintptr) *StackFrame {
@@ -90,13 +91,25 @@ func newStackFrame(pc uintptr) *StackFrame {
 	if f == nil {
 		return nil
 	}
-	file, line := f.FileLine(pc)
+
+	// get the PC of the instruction, not the return
+	// https://github.com/golang/go/issues/5518
+	// https://play.golang.org/p/lTWpWsrIT3
+	linePC := pc
+	if linePC > f.Entry() {
+		linePC--
+	}
+
+	file, line := f.FileLine(linePC)
+	fSplit := strings.SplitN(path.Base(f.Name()), ".", 2)
+	pkg, fun := fSplit[0], fSplit[1]
 	return &StackFrame{
 		PC:       pc,
 		File:     file,
 		Line:     line,
 		Function: f.Name(),
-		Func:     strings.SplitN(path.Base(f.Name()), ".", 2)[1],
+		Package:  pkg,
+		Func:     fun,
 	}
 }
 
@@ -117,6 +130,46 @@ func (sf *StackFrame) Source() []byte {
 	}
 	file.Close()
 	return scanner.Bytes()
+}
+
+// SourceContext retuns the source code lines surrounding the stack frame.
+func (sf *StackFrame) SourceContext(beforeCount int, afterCount int) (linesBefore [][]byte, line []byte, linesAfter [][]byte) {
+
+	if beforeCount >= sf.Line {
+		beforeCount = sf.Line - 1
+	}
+	firstLine := sf.Line - beforeCount
+	lastLine := sf.Line + afterCount
+
+	lines := [][]byte{}
+
+	file, err := os.Open(sf.File)
+	if err != nil {
+		return nil, nil, nil
+	}
+
+	scanner := bufio.NewScanner(file)
+	for i := 1; scanner.Scan(); i++ {
+		if i > lastLine {
+			break
+		}
+		if i < firstLine {
+			continue
+		}
+		lines = append(lines, scanner.Bytes())
+	}
+	file.Close()
+
+	if len(lines) < beforeCount+1 {
+		// something went wrong. We didn't read the whole source
+		return nil, nil, nil
+	}
+
+	linesBefore = lines[:beforeCount]
+	line = lines[beforeCount]
+	linesAfter = lines[beforeCount+1:]
+
+	return linesBefore, line, linesAfter
 }
 
 // NewEvent creates a new Event object.

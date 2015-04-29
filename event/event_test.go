@@ -22,9 +22,15 @@ func TestStackFrame(t *testing.T) {
 	assert.Equal(t, file, frame.File)
 	assert.Equal(t, line, frame.Line)
 	assert.Equal(t, f.Name(), frame.Function)
+	assert.Equal(t, "event", frame.Package)
 	assert.Equal(t, "TestStackFrame", frame.Func)
 
 	assert.Equal(t, "	pc, file, line, ok := runtime.Caller(0) //foo", string(frame.Source()))
+
+	scLinesBefore, scLine, scLinesAfter := frame.SourceContext(2, 2)
+	assert.Equal(t, [][]byte{[]byte{}, []byte("func TestStackFrame(t *testing.T) {")}, scLinesBefore)
+	assert.Equal(t, []byte("	pc, file, line, ok := runtime.Caller(0) //foo"), scLine)
+	assert.Equal(t, [][]byte{[]byte("	require.True(t, ok)"), []byte("	f := runtime.FuncForPC(pc)")}, scLinesAfter)
 }
 
 func TestNewEvent(t *testing.T) {

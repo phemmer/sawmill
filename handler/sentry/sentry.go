@@ -12,6 +12,7 @@ package sentry
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 	"os/exec"
 	"path"
@@ -190,8 +191,15 @@ func repoInfo() (repoRoot string, repoRevision string, repoTag string) {
 
 // Event sends the given log event to the sentry service.
 func (s *Sentry) Event(logEvent *event.Event) error {
+	message := logEvent.Message
+	if err, ok := logEvent.FlatFields["error"]; ok {
+		message = fmt.Sprintf("%s: %v", message, err)
+	} else if err, ok := logEvent.FlatFields["err"]; ok {
+		message = fmt.Sprintf("%s: %v", message, err)
+	}
+
 	s.RLock()
-	packet := raven.NewPacket(logEvent.Message)
+	packet := raven.NewPacket(message)
 	packet.Logger = "sawmill"
 	packet.EventID = s.idPrefix + strconv.FormatInt(int64(logEvent.Id), 10)
 	packet.Timestamp = raven.Timestamp(logEvent.Time)

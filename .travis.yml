@@ -14,4 +14,11 @@ script:
   - go list ./... | sed -e "s#^$(go list .)#.#" | xargs -n 1 go test -v -race -coverprofile=>(sed -e '1!{/^mode:/d}' > .coverprofile)
 
 after_success:
-  - goveralls -coverprofile=.coverprofile -repotoken $GOVERALLS_TOKEN
+  - |
+    if [[ -n "$GOVERALLS_TOKEN" ]]; then
+      goveralls -coverprofile=.coverprofile -repotoken $GOVERALLS_TOKEN
+    fi
+  - |
+    if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      go list ./... | xargs -n 1 -I{} curl http://godoc.org/-/refresh -d path={}
+    fi

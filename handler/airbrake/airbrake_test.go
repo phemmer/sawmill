@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"runtime"
 	"testing"
 
@@ -70,14 +69,4 @@ func TestAirbrakeHandler(t *testing.T) {
 
 	nParams := notice["params"].(map[string]interface{})
 	assert.Equal(t, "bar", nParams["foo"])
-}
-
-func TestRepoRoot(t *testing.T) {
-	// assume this test file is `sawmill/handler/airbrake/airbrake_test.go`
-	_, gitRoot, _, _ := runtime.Caller(0)
-	gitRoot = path.Dir(path.Dir(path.Dir(gitRoot)))
-
-	repoRoot, repoVersion := repoInfo()
-	assert.Equal(t, gitRoot, repoRoot)
-	assert.NotEmpty(t, repoVersion)
 }

@@ -1,6 +1,7 @@
 package sentry
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -25,12 +26,12 @@ func TestSentryHandler(t *testing.T) {
 	require.NoError(t, err)
 	handler.client.Transport = st
 
-	logEvent := event.NewEvent(1, event.Warning, "test SentryHandler", map[string]interface{}{"foo": "bar", "breakfast": map[string]interface{}{"pop": "tart"}}, true)
+	logEvent := event.NewEvent(1, event.Warning, "test SentryHandler", map[string]interface{}{"error": errors.New("foo"), "foo": "bar", "breakfast": map[string]interface{}{"pop": "tart"}}, true)
 	err = handler.Event(logEvent)
 	require.NoError(t, err)
 
 	packet := st.packets[len(st.packets)-1]
-	assert.Equal(t, "test SentryHandler", packet.Message)
+	assert.Equal(t, "test SentryHandler: foo", packet.Message)
 	assert.Equal(t, handler.idPrefix+"1", packet.EventID)
 	assert.WithinDuration(t, time.Now(), time.Time(packet.Timestamp), time.Second)
 	assert.Equal(t, raven.WARNING, packet.Level)
@@ -56,7 +57,7 @@ func TestSentryHandler(t *testing.T) {
 			assert.Contains(t, frame.AbsolutePath, "/handler/sentry/sentry_test.go")
 			assert.Equal(t, true, frame.InApp)
 			assert.Equal(t, "	handler.client.Transport = st", frame.PreContext[1])
-			assert.Equal(t, `	logEvent := event.NewEvent(1, event.Warning, "test SentryHandler", map[string]interface{}{"foo": "bar", "breakfast": map[string]interface{}{"pop": "tart"}}, true)`, frame.ContextLine)
+			assert.Equal(t, `	logEvent := event.NewEvent(1, event.Warning, "test SentryHandler", map[string]interface{}{"error": errors.New("foo"), "foo": "bar", "breakfast": map[string]interface{}{"pop": "tart"}}, true)`, frame.ContextLine)
 		}
 	}
 	assert.True(t, haveStacktrace)

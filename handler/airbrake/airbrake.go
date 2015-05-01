@@ -1,4 +1,4 @@
-// The airbrake package provies a handler which sends events to the Airbrake
+// The airbrake package provides a handler which sends events to the Airbrake
 // error reporting service.
 //
 // For a stack trace to be included, sawmill needs to be configured to gather
@@ -19,14 +19,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
-	"path"
 	"runtime"
 	"sync"
 
-	"golang.org/x/tools/go/vcs"
-
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/util"
 )
 
 var airbrakeURL = "https://airbrake.io"
@@ -35,14 +32,6 @@ var notifier = airbrakeNotifier{
 	Name:    "sawmill",
 	Version: "0.1",
 	Url:     "https://github.com/phemmer/sawmill",
-}
-
-// filePath is the path to this file.
-// This is used when getting the VCS repo information from the caller.
-var filePath string
-
-func init() {
-	_, filePath, _, _ = runtime.Caller(0)
 }
 
 type airbrakeNotifier struct {
@@ -146,7 +135,7 @@ type AirbrakeHandler struct {
 // The projectId & key parameters should be obtained from airbrake. The
 // environment parameter is the name of the environment to report errors under.
 func New(projectId int64, key string, environment string) *AirbrakeHandler {
-	repoRoot, repoVersion := repoInfo()
+	repoRoot, _, repoVersion := util.RepoInfo()
 	context := &AirbrakeContext{
 		OS:            runtime.GOOS + " " + runtime.GOARCH, //TODO syscall.Uname() when in linux
 		Language:      "go " + runtime.Version(),
@@ -170,48 +159,6 @@ func New(projectId int64, key string, environment string) *AirbrakeHandler {
 		Context:     context,
 		Env:         env,
 	}
-}
-
-func repoInfo() (string, string) {
-	var vcsCmd *vcs.Cmd
-	var repoRoot string
-	var repoVersion string
-
-	callers := make([]uintptr, 10)
-	callers = callers[:runtime.Callers(2, callers)]
-	for _, caller := range callers {
-		f := runtime.FuncForPC(caller)
-		file, _ := f.FileLine(caller)
-		if file == filePath {
-			continue
-		}
-
-		// walk up the dir until we get to the first directory in root.
-		// This is an unfortunately necessity to use vcs.FromDir()
-		topDir := file
-		for dir := path.Dir(topDir); dir != "." && dir[len(dir)-1] != '/' && dir != topDir; dir = path.Dir(topDir) {
-			topDir = dir
-		}
-
-		var err error
-		vcsCmd, repoRoot, err = vcs.FromDir(path.Dir(file), topDir)
-		if err != nil {
-			repoRoot = path.Dir(file)
-		}
-		repoRoot = topDir + "/" + repoRoot
-		break
-	}
-
-	if vcsCmd != nil && vcsCmd.Name == "Git" {
-		execCmd := exec.Command("git", "describe", "--dirty", "--tags", "--always")
-		execCmd.Dir = repoRoot
-		output, err := execCmd.Output()
-		if err == nil {
-			repoVersion = string(bytes.TrimRight(output, "\n"))
-		}
-	}
-
-	return repoRoot, repoVersion
 }
 
 // Event processes a sawmill event, and sends it to the airbrake service.

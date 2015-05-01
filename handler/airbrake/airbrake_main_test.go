@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
-	"path"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -19,14 +17,6 @@ import (
 
 func init() {
 	event.RepoPath = event.FilePath
-
-	// `go test -cover` rewrites the source, and screws up the package detection
-	// of filePath.
-	// Fortunately it doesn't muck with the test code, so we just reset it here.
-	if false {
-		_, filePath, _, _ = runtime.Caller(0)
-		filePath = path.Dir(filePath) + "/airbrake.go"
-	}
 }
 
 func TestMain(m *testing.M) {
@@ -63,6 +53,7 @@ func (server *airbrakeSvr) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if server.projectID != projectID || server.projectKey != projectKey {
 		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	id := strconv.FormatInt(time.Now().UnixNano(), 10)

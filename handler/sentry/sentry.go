@@ -11,12 +11,8 @@
 package sentry
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
-	"os/exec"
-	"path"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,16 +20,8 @@ import (
 
 	"github.com/getsentry/raven-go"
 	"github.com/phemmer/sawmill/event"
-	"golang.org/x/tools/go/vcs"
+	"github.com/phemmer/sawmill/util"
 )
-
-// filePath is the path to this file.
-// This is used when getting the VCS repo information from the caller.
-var filePath string
-
-func init() {
-	_, filePath, _, _ = runtime.Caller(0)
-}
 
 type Sentry struct {
 	sync.RWMutex
@@ -53,7 +41,7 @@ func New(dsn string) (*Sentry, error) {
 		return nil, err
 	}
 
-	repoRoot, repoRevision, repoTag := repoInfo()
+	repoRoot, repoRevision, repoTag := util.RepoInfo()
 	client.SetRelease(repoTag)
 	if repoRevision != "" {
 		client.Tags["revision"] = repoRevision
@@ -103,14 +91,19 @@ func ravenTrace(repoPath string, stack []*event.StackFrame) *raven.Stacktrace {
 	if repoPath != "" && repoPath[len(repoPath)-1] != '/' {
 		repoPath = repoPath + "/"
 	}
+
 	stackLen := len(stack)
 	ravenFrames := make([]*raven.StacktraceFrame, stackLen)
 	for i, frame := range stack {
-		filePath = frame.File
+		filePath := frame.File
 		inApp := false
 		if repoPath != "" && strings.HasPrefix(filePath, repoPath) {
 			filePath = filePath[len(repoPath):]
-			inApp = true
+
+			if !strings.Contains(filePath, "/Godeps/_workspace/src/") {
+				//TODO come up with a better way of filtering external packages
+				inApp = true
+			}
 		}
 
 		sourceBefore, source, sourceAfter := frame.SourceContext(3, 0)
@@ -138,55 +131,6 @@ func ravenTrace(repoPath string, stack []*event.StackFrame) *raven.Stacktrace {
 	}
 
 	return &raven.Stacktrace{Frames: ravenFrames}
-}
-
-// repoInfo attempts to find the repo information for the caller, and returns
-// the path to the top of the repo, the commit ID, and the tag.
-func repoInfo() (repoRoot string, repoRevision string, repoTag string) {
-	var vcsCmd *vcs.Cmd
-
-	callers := make([]uintptr, 10)
-	callers = callers[:runtime.Callers(2, callers)]
-	for _, caller := range callers {
-		f := runtime.FuncForPC(caller)
-		file, _ := f.FileLine(caller)
-		if file == filePath {
-			continue
-		}
-
-		// walk up the dir until we get to the first directory in root.
-		// This is an unfortunately necessity to use vcs.FromDir()
-		topDir := file
-		for dir := path.Dir(topDir); dir != "." && dir[len(dir)-1] != '/' && dir != topDir; dir = path.Dir(topDir) {
-			topDir = dir
-		}
-
-		var err error
-		vcsCmd, repoRoot, err = vcs.FromDir(path.Dir(file), topDir)
-		if err != nil {
-			repoRoot = path.Dir(file)
-		}
-		repoRoot = topDir + "/" + repoRoot
-		break
-	}
-
-	if vcsCmd != nil && vcsCmd.Name == "Git" {
-		execCmd := exec.Command("git", "describe", "--dirty", "--match", "", "--always")
-		execCmd.Dir = repoRoot
-		output, err := execCmd.Output()
-		if err == nil {
-			repoRevision = string(bytes.TrimRight(output, "\n"))
-		}
-
-		execCmd = exec.Command("git", "describe", "--dirty", "--tags", "--always")
-		execCmd.Dir = repoRoot
-		output, err = execCmd.Output()
-		if err == nil {
-			repoTag = string(bytes.TrimRight(output, "\n"))
-		}
-	}
-
-	return
 }
 
 // Event sends the given log event to the sentry service.

@@ -100,7 +100,7 @@ func ravenTrace(repoPath string, stack []*event.StackFrame) *raven.Stacktrace {
 		if repoPath != "" && strings.HasPrefix(filePath, repoPath) {
 			filePath = filePath[len(repoPath):]
 
-			if !strings.Contains(filePath, "/Godeps/_workspace/src/") {
+			if !strings.Contains(frame.File, "/Godeps/_workspace/src/") {
 				//TODO come up with a better way of filtering external packages
 				inApp = true
 			}

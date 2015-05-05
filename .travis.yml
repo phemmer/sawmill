@@ -19,6 +19,6 @@ after_success:
       goveralls -coverprofile=.coverprofile -repotoken $GOVERALLS_TOKEN
     fi
   - |
-    if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+    if [[ "$TRAVIS_PULL_REQUEST" == "false" ]] && [[ "$TRAVIS_BRANCH" == "master" ]]; then
       go list ./... | xargs -n 1 -I{} curl http://godoc.org/-/refresh -d path={}
     fi

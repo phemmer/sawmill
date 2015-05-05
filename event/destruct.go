@@ -40,7 +40,7 @@ func deStructValue(dataValue reflect.Value) (interface{}, interface{}, map[strin
 	}
 	dataCopy, dataScalar, flatFields = deStructX(dataValue)
 
-	if dataValue.IsValid() {
+	if dataValue.IsValid() && !(dataValue.Kind() == reflect.Ptr && dataValue.IsNil()) {
 		if stringer, ok := dataValue.Interface().(fmt.Stringer); ok {
 			// has a string interface. Discard dataScalar and flatFields
 			// Basically we called deStructX() only for the dataCopy

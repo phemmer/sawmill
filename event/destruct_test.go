@@ -124,6 +124,12 @@ var tests = []test{
 		map[string]interface{}{},
 	},
 	{
+		(*boolStringer)(nil),
+		(*boolStringer)(nil),
+		nil,
+		map[string]interface{}{},
+	},
+	{
 		map[string]string{"foo": "bar"},
 		map[interface{}]interface{}{"foo": "bar"},
 		nil,

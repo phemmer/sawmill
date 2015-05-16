@@ -183,6 +183,40 @@ func TestLoggerFatal(t *testing.T) {
 	assert.Equal(t, exitCode, 1)
 }
 
+func TestLoggerCheckPanic(t *testing.T) {
+	var panicErr interface{}
+	defer func() {
+		panicErr = recover()
+	}()
+
+	logger := NewLogger()
+	handler := NewChannelHandler()
+	logger.AddHandler("TestLoggerCheckPanic", handler)
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		// goroutine is because the channelHandler is unbuffered, meaning the
+		// CheckPanic will block trying to write a log event until handler.Next() is
+		// called.
+		defer func() {
+			panicErr = recover()
+			wg.Done()
+		}()
+		defer logger.CheckPanic()
+		panic("this is a panic")
+	}()
+
+	logEvent := handler.Next(time.Second)
+
+	assert.Equal(t, "panic", logEvent.Message)
+	assert.Equal(t, "this is a panic", logEvent.FlatFields["error"])
+
+	// make sure the panic was passed through
+	wg.Wait()
+	assert.Equal(t, "this is a panic", panicErr)
+}
+
 // this test is a bit complicated because we have to deal with synchronizing 2 goroutines
 // The idea is:
 // * We generate an event

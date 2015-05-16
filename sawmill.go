@@ -189,7 +189,16 @@ func Sync(eventId uint64) {
 
 // Stop removes all destinations on the logger, and waits for any pending events to flush to their destinations.
 func Stop() {
+	DefaultLogger().checkPanic(recover())
 	DefaultLogger().Stop()
+}
+
+// CheckPanic is used to check for panics and log them when encountered.
+// The function must be executed via defer.
+// CheckPanic will not halt the panic. After logging, the panic will be passed
+// through.
+func CheckPanic() {
+	DefaultLogger().checkPanic(recover())
 }
 
 // NewWriter returns an io.WriteCloser compatable object that can be used for traditional writing into sawmill.

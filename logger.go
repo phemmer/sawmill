@@ -169,6 +169,8 @@ func (logger *Logger) FilterHandler(handler Handler, filterFuncs ...filter.Filte
 
 // Stop removes all destination handlers on the logger, and waits for any pending events to flush out.
 func (logger *Logger) Stop() {
+	logger.checkPanic(recover())
+
 	logger.mutex.RLock()
 	handlerNames := make([]string, len(logger.eventHandlerMap))
 	for handlerName, _ := range logger.eventHandlerMap {
@@ -181,6 +183,23 @@ func (logger *Logger) Stop() {
 	}
 
 	logger.waitgroup.Wait() //TODO timeout?
+}
+
+// CheckPanic is used to check for panics and log them when encountered.
+// The function must be executed via defer.
+// CheckPanic will not halt the panic. After logging, the panic will be passed
+// through.
+func (logger *Logger) CheckPanic() {
+	// recover only works when called in the function that was deferred, not
+	// recurisvely. But the code is shared by several other functions.
+	logger.checkPanic(recover())
+}
+func (logger *Logger) checkPanic(err interface{}) {
+	if err == nil {
+		return
+	}
+	logger.Sync(logger.Critical("panic", Fields{"error": err}))
+	panic(err)
 }
 
 // InitStdStreams is a convience function to register a STDOUT/STDERR handler with the logger.

@@ -38,7 +38,7 @@ func TestAirbrakeHandler(t *testing.T) {
 	nError := nErrors[0].(map[string]interface{})
 	nBacktrace := nError["backtrace"].([]interface{})
 	nBacktrace0 := nBacktrace[0].(map[string]interface{})
-	assert.Equal(t, "Warning", nError["type"])
+	assert.Equal(t, "warning", nError["type"])
 	assert.Equal(t, "test AirbrakeHandler", nError["message"])
 	assert.Equal(t, selfFile, nBacktrace0["file"])
 	assert.NotEmpty(t, nBacktrace0["line"])

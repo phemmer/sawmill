@@ -116,6 +116,7 @@ func TestEvent(t *testing.T) {
 	assert.Equal(t, sw.Hostname, serverEvent.host)
 	assert.Equal(t, sw.Source, serverEvent.source)
 	assert.Equal(t, sw.SourceType, serverEvent.sourcetype)
+	assert.Contains(t, serverEvent.message, "warning(3)")
 	assert.Contains(t, serverEvent.message, logEvent.Message)
 	assert.Contains(t, serverEvent.message, "test=TestEvent")
 }

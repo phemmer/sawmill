@@ -33,7 +33,7 @@ import (
 
 // SplunkFormat is the default template format.
 // It is meant to work with the 'syslog' splunk sourcetype, such that the splunk field extraction matches most of the headers. The only header not properly parsed is the level.
-const SplunkFormat = "{{.Time \"2006-01-02 15:04:05.000 -0700\"}} {{.Level}}({{.Event.Level}}) {{Source}}[{{Pid}}]: " + formatter.SIMPLE_FORMAT
+const SplunkFormat = "{{.Time \"2006-01-02 15:04:05.000 -0700\"}} {{.Level}}({{.Event.Level.Int}}) {{Source}}[{{Pid}}]: " + formatter.SIMPLE_FORMAT
 
 // SplunkSourceType is the default splunk source type
 const SplunkSourceType = "syslog"

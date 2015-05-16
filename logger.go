@@ -237,7 +237,7 @@ func (logger *Logger) Event(level event.Level, message string, fields ...interfa
 
 	getStack := int32(level) >= atomic.LoadInt32(&logger.stackMinLevel)
 	eventId := atomic.AddUint64(&logger.lastEventId, 1)
-	logEvent := event.NewEvent(eventId, level, message, eventFields, getStack)
+	logEvent := event.New(eventId, level, message, eventFields, getStack)
 
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {

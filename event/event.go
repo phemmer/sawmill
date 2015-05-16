@@ -38,7 +38,7 @@ func init() {
 	RepoPath = path.Dir(RepoPath)
 }
 
-type Level int32
+type Level int
 
 const (
 	Debug, Dbg Level = iota, iota
@@ -64,6 +64,9 @@ var levelNames = [8]string{
 
 func (l Level) String() string {
 	return levelNames[l]
+}
+func (l Level) Int() int {
+	return int(l)
 }
 
 type Event struct {

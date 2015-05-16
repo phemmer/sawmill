@@ -43,6 +43,11 @@ func TestLevelName(t *testing.T) {
 	assert.Equal(t, "emergency", Emergency.String())
 }
 
+func TestLevelInt(t *testing.T) {
+	assert.IsType(t, int(0), Info.Int())
+	assert.Equal(t, int(Info), Info.Int())
+}
+
 func TestNewEvent(t *testing.T) {
 	e := NewEvent(
 		123,

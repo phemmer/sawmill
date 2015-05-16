@@ -48,35 +48,35 @@ func TestLevelInt(t *testing.T) {
 	assert.Equal(t, int(Info), Info.Int())
 }
 
-func TestNewEvent(t *testing.T) {
-	e := NewEvent(
+func TestNew(t *testing.T) {
+	e := New(
 		123,
 		Notice,
-		"test NewEvent",
+		"test New",
 		map[string]interface{}{"foo": map[string]string{"bar": "baz"}},
 		false,
 	)
 
 	assert.Equal(t, uint64(123), e.Id)
 	assert.Equal(t, Notice, e.Level)
-	assert.Equal(t, "test NewEvent", e.Message)
+	assert.Equal(t, "test New", e.Message)
 	assert.Equal(t, map[string]interface{}{"foo.bar": "baz"}, e.FlatFields)
 	assert.Equal(t, map[interface{}]interface{}{"foo": map[interface{}]interface{}{"bar": "baz"}}, e.Fields)
 	assert.Empty(t, e.Stack)
 	assert.WithinDuration(t, time.Now(), e.Time, time.Second)
 }
 
-func TestNewEvent_Stack(t *testing.T) {
-	// Temporarily override repoPath as NewEvent is going to look for the first
+func TestNew_Stack(t *testing.T) {
+	// Temporarily override repoPath as New is going to look for the first
 	// file outside the package, which won't work here...
 	repoPathBkup := RepoPath
 	RepoPath = FilePath
 	defer func() { RepoPath = repoPathBkup }()
 
-	e := NewEvent(
+	e := New(
 		123,
 		Notice,
-		"test NewEvent Stack",
+		"test New Stack",
 		nil,
 		true,
 	)

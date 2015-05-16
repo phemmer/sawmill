@@ -22,7 +22,7 @@ func TestAirbrakeHandler(t *testing.T) {
 	ah.Context.UserName = "john doe"
 	ah.Context.UserEmail = "john.doe@example.com"
 
-	logEvent := event.NewEvent(1, event.Warning, "test AirbrakeHandler", map[string]interface{}{"foo": "bar"}, true)
+	logEvent := event.New(1, event.Warning, "test AirbrakeHandler", map[string]interface{}{"foo": "bar"}, true)
 	err := ah.Event(logEvent)
 	require.NoError(t, err)
 

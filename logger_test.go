@@ -279,7 +279,7 @@ func TestSetStackMinLevel(t *testing.T) {
 	logEvent = handler.Next(time.Second)
 	assert.NotEmpty(t, logEvent.Stack)
 	// Unfortunately we can't (easily) test that the stack trace includes this
-	// test function as event.NewEvent looks for the first function outside
+	// test function as event.New looks for the first function outside
 	// the sawmill package, and we're testing inside the package.
 	// However it should at least include the testing package as that's what
 	// called us.

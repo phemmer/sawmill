@@ -175,9 +175,9 @@ func (sf *StackFrame) SourceContext(beforeCount int, afterCount int) (linesBefor
 	return linesBefore, line, linesAfter
 }
 
-// NewEvent creates a new Event object.
+// New creates a new Event object.
 // The time is set to current time, and the fields are deep-copied.
-func NewEvent(id uint64, level Level, message string, fields interface{}, getStack bool) *Event {
+func New(id uint64, level Level, message string, fields interface{}, getStack bool) *Event {
 	now := time.Now()
 
 	var stack []*StackFrame

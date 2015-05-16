@@ -33,6 +33,16 @@ func TestStackFrame(t *testing.T) {
 	assert.Equal(t, [][]byte{[]byte("	require.True(t, ok)"), []byte("	f := runtime.FuncForPC(pc)")}, scLinesAfter)
 }
 
+func TestLevelName(t *testing.T) {
+	assert.Equal(t, "debug", Debug.String())
+	assert.Equal(t, "info", Info.String())
+	assert.Equal(t, "notice", Notice.String())
+	assert.Equal(t, "warning", Warning.String())
+	assert.Equal(t, "error", Error.String())
+	assert.Equal(t, "critical", Critical.String())
+	assert.Equal(t, "emergency", Emergency.String())
+}
+
 func TestNewEvent(t *testing.T) {
 	e := NewEvent(
 		123,

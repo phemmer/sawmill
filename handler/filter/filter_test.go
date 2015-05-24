@@ -192,3 +192,30 @@ func TestLevelMinMax(t *testing.T) {
 		}
 	}
 }
+
+func TestDedup(t *testing.T) {
+	ch := &captureHandler{}
+	filter := New(ch)
+	filter.Dedup()
+
+	testEvent1 := makeEvent(event.Notice)
+	filter.Event(testEvent1)
+	filter.Event(testEvent1)
+	testEvent1.Id = 123
+	filter.Event(testEvent1)
+
+	testEvent2 := makeEvent(event.Notice)
+	testEvent2.Message = testEvent2.Message + " 2"
+	filter.Event(testEvent2)
+
+	// should have first message, "dups" message, and the second message
+	assert.Equal(t, 3, len(ch.events))
+
+	assert.Equal(t, testEvent1.Message, ch.events[0].Message)
+
+	assert.Equal(t, "duplicates of last log event suppressed", ch.events[1].Message)
+	assert.Equal(t, 2, ch.events[1].FlatFields["count"])
+	assert.Equal(t, uint64(123), ch.events[1].Id)
+
+	assert.Equal(t, testEvent2.Message, ch.events[2].Message)
+}

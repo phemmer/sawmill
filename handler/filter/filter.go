@@ -93,6 +93,8 @@ func (filterHandler *FilterHandler) LevelMax(levelMax event.Level) *FilterHandle
 // previous message, the message is not sent on to the next handler. Once a
 // different message is received, the filter generates a summary message
 // indicating how many duplicates were suppressed.
+//
+// The return value is the handler itself. This is to allow chaining multiple operations together.
 func (filterHandler *FilterHandler) Dedup() *FilterHandler {
 	var lastLogEvent *event.Event
 	var dups int

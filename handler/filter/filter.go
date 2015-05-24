@@ -6,6 +6,8 @@ The filter itself is just a handler which sits in front of another handler. When
 package filter
 
 import (
+	"reflect"
+
 	"github.com/phemmer/sawmill/event"
 )
 
@@ -78,6 +80,47 @@ func (filterHandler *FilterHandler) LevelMax(levelMax event.Level) *FilterHandle
 		if logEvent.Level > levelMax {
 			return false
 		}
+		return true
+	}
+
+	return filterHandler.Filter(filterFunc)
+}
+
+// Dedup adds a canned filter to the handler which suppresses duplicate
+// messages.
+//
+// When an event is received that contains the same message & fields as a
+// previous message, the message is not sent on to the next handler. Once a
+// different message is received, the filter generates a summary message
+// indicating how many duplicates were suppressed.
+func (filterHandler *FilterHandler) Dedup() *FilterHandler {
+	var lastLogEvent *event.Event
+	var dups int
+	filterFunc := func(logEvent *event.Event) bool {
+		if lastLogEvent == nil {
+			lastLogEvent = logEvent
+			return true
+		}
+
+		if lastLogEvent.Message == logEvent.Message && reflect.DeepEqual(lastLogEvent.FlatFields, logEvent.FlatFields) {
+			dups++
+			lastLogEvent = logEvent
+			return false
+		}
+
+		if dups > 0 {
+			dupEvent := event.New(
+				lastLogEvent.Id,
+				event.Notice,
+				"duplicates of last log event suppressed",
+				map[string]int{"count": dups},
+				false,
+			)
+			filterHandler.nextHandler.Event(dupEvent)
+		}
+
+		dups = 0
+		lastLogEvent = logEvent
 		return true
 	}
 

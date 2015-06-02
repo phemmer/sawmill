@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/channel"
 	"github.com/phemmer/sawmill/handler/filter"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLoggerEvent(t *testing.T) {
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 
 	logger := NewLogger()
 	logger.AddHandler("TestEvent", handler)
@@ -30,7 +31,7 @@ func TestLoggerEvent(t *testing.T) {
 
 // this makes sure that a removed handler processes no further events
 func TestLoggerRemoveHandler(t *testing.T) {
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 
 	logger := NewLogger()
 	logger.AddHandler("TestEvent", handler)
@@ -43,7 +44,7 @@ func TestLoggerRemoveHandler(t *testing.T) {
 
 // check that removing a handler already removed doesn't error
 func TestLoggerRemoveHandlerTwice(t *testing.T) {
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 
 	logger := NewLogger()
 	logger.AddHandler("TestEvent", handler)
@@ -53,7 +54,7 @@ func TestLoggerRemoveHandlerTwice(t *testing.T) {
 
 // check that removing a handler waits for the handler to finish processing
 func TestLoggerRemoveHandlerWait(t *testing.T) {
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 
 	logger := NewLogger()
 	logger.AddHandler("TestEvent", handler)
@@ -64,7 +65,7 @@ func TestLoggerRemoveHandlerWait(t *testing.T) {
 	assert.Equal(t, logger.eventHandlerMap["TestEvent"].lastSentEventId, eventId1)
 	assert.NotEqual(t, logger.eventHandlerMap["TestEvent"].lastProcessedEventId, eventId1)
 
-	// send a second event, just so we have one that's not sitting on the channelHandler channel
+	// send a second event, just so we have one that's not sitting on the channel.Handler channel
 	eventId2 := logger.Event(InfoLevel, "TestEvent")
 	assert.Equal(t, logger.eventHandlerMap["TestEvent"].lastSentEventId, eventId2)
 	assert.NotEqual(t, logger.eventHandlerMap["TestEvent"].lastProcessedEventId, eventId2)
@@ -85,11 +86,11 @@ func TestLoggerRemoveHandlerWait(t *testing.T) {
 func TestLoggerAddDuplicateHandler(t *testing.T) {
 	logger := NewLogger()
 
-	handler1 := NewChannelHandler()
+	handler1 := channel.NewHandler()
 	logger.AddHandler("TestEvent", handler1)
 	defer logger.RemoveHandler("TestEvent", false)
 
-	handler2 := NewChannelHandler()
+	handler2 := channel.NewHandler()
 	logger.AddHandler("TestEvent", handler2)
 
 	logger.Event(InfoLevel, "TestEvent")
@@ -101,7 +102,7 @@ func TestLoggerAddDuplicateHandler(t *testing.T) {
 func TestLoggerFilterHandler(t *testing.T) {
 	logger := NewLogger()
 
-	channelHandler := NewChannelHandler()
+	channelHandler := channel.NewHandler()
 
 	handler := logger.FilterHandler(channelHandler)
 	assert.IsType(t, &filter.FilterHandler{}, handler)
@@ -111,7 +112,7 @@ func TestLoggerHelpers(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger.AddHandler("TestEvent", handler)
 
 	type testLoggerHelper struct {
@@ -157,7 +158,7 @@ func TestLoggerFatal(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger.AddHandler("TestEvent", handler)
 
 	// logger.Fatal performs a Stop(), which waits for the handler to process the event. So we have to process it or we deadlock. We do this by starting a goroutine
@@ -190,13 +191,13 @@ func TestLoggerCheckPanic(t *testing.T) {
 	}()
 
 	logger := NewLogger()
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger.AddHandler("TestLoggerCheckPanic", handler)
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		// goroutine is because the channelHandler is unbuffered, meaning the
+		// goroutine is because the channel.Handler is unbuffered, meaning the
 		// CheckPanic will block trying to write a log event until handler.Next() is
 		// called.
 		defer func() {
@@ -230,7 +231,7 @@ func TestSync(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger.AddHandler("TestEvent", handler)
 
 	var lastHandledEventId uint64
@@ -267,7 +268,7 @@ func TestSetStackMinLevel(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()
 
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger.AddHandler("TestSetStackMinLevel", handler)
 	logger.SetStackMinLevel(ErrorLevel)
 

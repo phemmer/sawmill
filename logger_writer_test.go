@@ -8,10 +8,11 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/channel"
 )
 
 func TestNewWriter(t *testing.T) {
-	handler := NewChannelHandler()
+	handler := channel.NewHandler()
 	logger := NewLogger()
 	defer logger.Stop()
 	logger.AddHandler("TestNewWriter", handler)

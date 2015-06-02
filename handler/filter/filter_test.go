@@ -8,16 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/capture"
 )
-
-type captureHandler struct {
-	events []*event.Event
-}
-
-func (ch *captureHandler) Event(logEvent *event.Event) error {
-	ch.events = append(ch.events, logEvent)
-	return nil
-}
 
 var eventCounter uint64
 
@@ -35,19 +27,19 @@ func makeEvent(level event.Level) *event.Event {
 }
 
 func TestEvent(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	logEvent := makeEvent(0)
 
 	filter.Event(logEvent)
 
-	require.NotEmpty(t, ch.events)
-	assert.Equal(t, logEvent, ch.events[0])
+	require.NotEmpty(t, ch.Events())
+	assert.Equal(t, logEvent, ch.Events()[0])
 }
 
 func TestFilter_reject(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.Filter(func(e *event.Event) bool { return false })
@@ -56,11 +48,11 @@ func TestFilter_reject(t *testing.T) {
 
 	filter.Event(logEvent)
 
-	require.Empty(t, ch.events)
+	require.Empty(t, ch.Events())
 }
 
 func TestFilter_allow(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.Filter(func(e *event.Event) bool { return true })
@@ -69,12 +61,12 @@ func TestFilter_allow(t *testing.T) {
 
 	filter.Event(logEvent)
 
-	require.NotEmpty(t, ch.events)
-	assert.Equal(t, logEvent, ch.events[0])
+	require.NotEmpty(t, ch.Events())
+	assert.Equal(t, logEvent, ch.Events()[0])
 }
 
 func TestFilter_allowReject(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.Filter(func(e *event.Event) bool { return true })
@@ -84,11 +76,11 @@ func TestFilter_allowReject(t *testing.T) {
 
 	filter.Event(logEvent)
 
-	require.Empty(t, ch.events)
+	require.Empty(t, ch.Events())
 }
 
 func TestLevelMin(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.LevelMin(event.Notice)
@@ -107,23 +99,23 @@ func TestLevelMin(t *testing.T) {
 		{event.Emergency, true},
 	}
 	for _, test := range table {
-		ch.events = []*event.Event{}
+		ch.Clear()
 		testEvent := makeEvent(test.level)
 		filter.Event(testEvent)
 
 		if test.allowed {
-			if !assert.NotEmpty(t, ch.events, "%s was rejected.", test.level) {
+			if !assert.NotEmpty(t, ch.Events(), "%s was rejected.", test.level) {
 				continue
 			}
-			assert.Equal(t, testEvent, ch.events[0])
+			assert.Equal(t, testEvent, ch.Events()[0])
 		} else {
-			assert.Empty(t, ch.events, "%s was allowed.", test.level)
+			assert.Empty(t, ch.Events(), "%s was allowed.", test.level)
 		}
 	}
 }
 
 func TestLevelMax(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.LevelMax(event.Notice)
@@ -142,23 +134,23 @@ func TestLevelMax(t *testing.T) {
 		{event.Emergency, false},
 	}
 	for _, test := range table {
-		ch.events = []*event.Event{}
+		ch.Clear()
 		testEvent := makeEvent(test.level)
 		filter.Event(testEvent)
 
 		if test.allowed {
-			if !assert.NotEmpty(t, ch.events, "%s was rejected.", test.level) {
+			if !assert.NotEmpty(t, ch.Events(), "%s was rejected.", test.level) {
 				continue
 			}
-			assert.Equal(t, testEvent, ch.events[0])
+			assert.Equal(t, testEvent, ch.Events()[0])
 		} else {
-			assert.Empty(t, ch.events, "%s was allowed.", test.level)
+			assert.Empty(t, ch.Events(), "%s was allowed.", test.level)
 		}
 	}
 }
 
 func TestLevelMinMax(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 
 	filter.LevelMin(event.Notice)
@@ -178,23 +170,23 @@ func TestLevelMinMax(t *testing.T) {
 		{event.Emergency, false},
 	}
 	for _, test := range table {
-		ch.events = []*event.Event{}
+		ch.Clear()
 		testEvent := makeEvent(test.level)
 		filter.Event(testEvent)
 
 		if test.allowed {
-			if !assert.NotEmpty(t, ch.events, "%s was rejected.", test.level) {
+			if !assert.NotEmpty(t, ch.Events(), "%s was rejected.", test.level) {
 				continue
 			}
-			assert.Equal(t, testEvent, ch.events[0])
+			assert.Equal(t, testEvent, ch.Events()[0])
 		} else {
-			assert.Empty(t, ch.events, "%s was allowed.", test.level)
+			assert.Empty(t, ch.Events(), "%s was allowed.", test.level)
 		}
 	}
 }
 
 func TestDedup(t *testing.T) {
-	ch := &captureHandler{}
+	ch := capture.NewHandler()
 	filter := New(ch)
 	filter.Dedup()
 
@@ -209,13 +201,13 @@ func TestDedup(t *testing.T) {
 	filter.Event(testEvent2)
 
 	// should have first message, "dups" message, and the second message
-	assert.Equal(t, 3, len(ch.events))
+	assert.Equal(t, 3, len(ch.Events()))
 
-	assert.Equal(t, testEvent1.Message, ch.events[0].Message)
+	assert.Equal(t, testEvent1.Message, ch.Events()[0].Message)
 
-	assert.Equal(t, "duplicates of last log event suppressed", ch.events[1].Message)
-	assert.Equal(t, 2, ch.events[1].FlatFields["count"])
-	assert.Equal(t, uint64(123), ch.events[1].Id)
+	assert.Equal(t, "duplicates of last log event suppressed", ch.Events()[1].Message)
+	assert.Equal(t, 2, ch.Events()[1].FlatFields["count"])
+	assert.Equal(t, uint64(123), ch.Events()[1].Id)
 
-	assert.Equal(t, testEvent2.Message, ch.events[2].Message)
+	assert.Equal(t, testEvent2.Message, ch.Events()[2].Message)
 }

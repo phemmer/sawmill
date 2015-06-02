@@ -3,69 +3,20 @@ package sawmill
 import (
 	"fmt"
 	"os"
-	"sync"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/phemmer/sawmill/event"
+	"github.com/phemmer/sawmill/handler/capture"
 	"github.com/stretchr/testify/assert"
 )
 
-type channelHandler struct {
-	channel chan *event.Event
-}
-
-func NewChannelHandler() *channelHandler {
-	return &channelHandler{
-		channel: make(chan *event.Event),
-	}
-}
-func (handler *channelHandler) Event(logEvent *event.Event) error {
-	//fmt.Printf("Sending to channel: %#v\n", logEvent)
-	handler.channel <- logEvent
-	return nil
-}
-func (handler *channelHandler) Next(timeout time.Duration) *event.Event {
-	var logEvent *event.Event
-	if timeout == 0 {
-		select {
-		case logEvent = <-handler.channel:
-		default:
-		}
-	} else {
-		select {
-		case logEvent = <-handler.channel:
-		case <-time.After(timeout):
-		}
-	}
-	//fmt.Printf("Received from channel: %#v\n", logEvent)
-	return logEvent
-}
-
-type captureHandler struct {
-	events []*event.Event
-	mutex  sync.Mutex
-}
-
-func (handler *captureHandler) Event(logEvent *event.Event) error {
-	handler.mutex.Lock()
-	handler.events = append(handler.events, logEvent)
-	handler.mutex.Unlock()
-	return nil
-}
-func (handler *captureHandler) Last() *event.Event {
-	handler.mutex.Lock()
-	logEvent := handler.events[len(handler.events)-1]
-	handler.mutex.Unlock()
-	return logEvent
-}
-
-func CaptureEvents() *captureHandler {
+func CaptureEvents() *capture.Handler {
 	logger := DefaultLogger()
 	logger.RemoveHandler("stdout", false)
 	logger.RemoveHandler("stderr", false)
-	handler := &captureHandler{}
+	handler := capture.NewHandler()
 	logger.AddHandler("testcap", handler)
 	return handler
 }

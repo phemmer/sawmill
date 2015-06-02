@@ -1,3 +1,9 @@
+// The channel handler provides an unbuffered `chan *event.Event`
+// onto which each recieved event is written. Events are read from the chan
+// using `Next()`.
+//
+// NB: since the `chan *event.Event` is unbuffered, `Event()` will block until some other
+// goroutine reads from the chan.
 package channel
 
 import (

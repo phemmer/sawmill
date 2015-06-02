@@ -1,3 +1,9 @@
+// The capture handler maintains a threadsafe slice of *event.Event. Events are added to the slice
+// in the order that they are recieved. Provided for convenience:
+//
+//  * `Last()` func which returns the last event in the slice
+//  * `Events()` func which returns a copy of the events slice
+//  * `Clear()` func which drops all events in the slice
 package capture
 
 import (
@@ -41,7 +47,7 @@ func (handler *Handler) Last() *event.Event {
 	return logEvent
 }
 
-// Events returns the slice of captured events
+// Events returns a slice of captured events
 func (handler *Handler) Events() []*event.Event {
 	handler.mutex.Lock()
 	dst := make([]*event.Event, len(handler.events))

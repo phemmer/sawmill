@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Handler_iface(t *testing.T) {
+func TestHandlerIface(t *testing.T) {
 	assert.Implements(t, (*sawmill.Handler)(nil), NewHandler())
 }
 
-func Test_Event(t *testing.T) {
+func TestEvent(t *testing.T) {
 	ch := NewHandler()
 	logEvent := makeEvent(0)
 	go ch.Event(logEvent)
@@ -28,7 +28,7 @@ func Test_Event(t *testing.T) {
 	assert.Equal(t, logEvent, chEvent)
 }
 
-func Test_Next(t *testing.T) {
+func TestNext(t *testing.T) {
 	ch := NewHandler()
 	logEvent := makeEvent(0)
 	go func() { ch.channel <- logEvent }()
@@ -38,7 +38,7 @@ func Test_Next(t *testing.T) {
 	assert.Equal(t, logEvent, chEvent)
 }
 
-func Test_Next_timeout(t *testing.T) {
+func TestNextTimeout(t *testing.T) {
 	ch := NewHandler()
 
 	chEvent := ch.Next(time.Nanosecond)
@@ -46,7 +46,7 @@ func Test_Next_timeout(t *testing.T) {
 	assert.Nil(t, chEvent)
 }
 
-func Test_Next_nonblocking(t *testing.T) {
+func TestNextNonblocking(t *testing.T) {
 	ch := NewHandler()
 	logEvent := makeEvent(0)
 	go func() {

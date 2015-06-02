@@ -9,11 +9,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_Handler_iface(t *testing.T) {
+func TestHandlerIface(t *testing.T) {
 	assert.Implements(t, (*sawmill.Handler)(nil), NewHandler())
 }
 
-func Test_Event(t *testing.T) {
+func TestEvent(t *testing.T) {
 	ch := NewHandler()
 	logEvent0 := makeEvent(0)
 	logEvent1 := makeEvent(1)
@@ -28,7 +28,7 @@ func Test_Event(t *testing.T) {
 	assert.Equal(t, logEvent2, ch.events[2])
 }
 
-func Test_Last(t *testing.T) {
+func TestLast(t *testing.T) {
 	ch := NewHandler()
 	logEvent2 := makeEvent(2)
 
@@ -39,13 +39,13 @@ func Test_Last(t *testing.T) {
 	assert.Equal(t, logEvent2, ch.Last())
 }
 
-func Test_Last_empty(t *testing.T) {
+func TestLastEmpty(t *testing.T) {
 	ch := NewHandler()
 
 	assert.Nil(t, ch.Last())
 }
 
-func Test_Events(t *testing.T) {
+func TestEvents(t *testing.T) {
 	ch := NewHandler()
 	events := []*event.Event{
 		makeEvent(0),
@@ -60,7 +60,7 @@ func Test_Events(t *testing.T) {
 	assert.Equal(t, events, ch.Events())
 }
 
-func Test_Clear(t *testing.T) {
+func TestClear(t *testing.T) {
 	ch := NewHandler()
 	for i := 0; i < 5; i++ {
 		ch.Event(makeEvent(0))

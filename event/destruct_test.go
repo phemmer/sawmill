@@ -7,6 +7,7 @@ import (
 	"net"
 	"reflect"
 	"testing"
+	"time"
 )
 
 type test struct {
@@ -90,6 +91,12 @@ var tests = []test{
 	{
 		nilPointer,
 		nilPointer,
+		nil,
+		map[string]interface{}{},
+	},
+	{
+		map[string]interface{}{"foo": (*time.Time)(nil)}, // wrap a nil pointer in an interface. the map is just the simplest way to do so
+		map[interface{}]interface{}{"foo": (*time.Time)(nil)},
 		nil,
 		map[string]interface{}{},
 	},

@@ -70,6 +70,19 @@ The airbrake handler sends events to the [Airbrake error reporting service](http
 Readme: https://github.com/phemmer/sawmill/blob/master/handler/airbrake/README.md  
 Godoc: http://godoc.org/github.com/phemmer/sawmill/handler/airbrake
 
+```go
+import (
+	"github.com/phemmer/sawmill"
+	"github.com/phemmer/sawmill/handler/airbrake"
+)
+
+func main() {
+	a := airbrake.New(123456, "0123456789abcdef0123456789abcdef", "production")
+	filter := sawmill.FilterHandler(a).LevelMin(sawmill.ErrorLevel)
+	sawmill.AddHandler("airbrake", filter)
+}
+```
+
 ![Example](http://i.imgur.com/jYIjk6s.png)
 
 ### [Sentry](https://github.com/phemmer/sawmill/tree/master/handler/sentry)
@@ -80,13 +93,47 @@ The sentry handler sends events to the [Sentry error reporting service](https://
 Readme: https://github.com/phemmer/sawmill/blob/master/handler/sentry/README.md  
 Godoc: http://godoc.org/github.com/phemmer/sawmill/handler/sentry
 
+```go
+import (
+	"github.com/phemmer/sawmill"
+	"github.com/phemmer/sawmill/handler/sentry"
+)
+
+var sentryDSN = "https://00112233445566778899aabbccddeeff:0123456789abcdef0123456789abcdef@app.getsentry.com/12345"
+
+func main() {
+	if s, err := sentry.New(sentryDSN); err == nil {
+		filter := sawmill.FilterHandler(s).LevelMin(sawmill.ErrorLevel)
+		sawmill.AddHandler("sentry", filter)
+	}
+}
+```
+
 ![Example](http://i.imgur.com/TsNFXgR.png)
 
 ### [Splunk](https://github.com/phemmer/sawmill/tree/master/handler/splunk)
 
 The splunk handler sends events to a [Splunk log collector](http://www.splunk.com/). This includes both [Splunk Cloud](http://www.splunk.com/en_us/products/splunk-cloud.html) and [Splunk Enterprise](http://www.splunk.com/en_us/products/splunk-enterprise.html).
 
+Readme: https://github.com/phemmer/sawmill/blob/master/handler/splunk/README.md  
 Godoc: http://godoc.org/github.com/phemmer/sawmill/handler/splunk
+
+```go
+import (
+	"github.com/phemmer/sawmill"
+	"github.com/phemmer/sawmill/handler/splunk"
+)
+
+var splunkURL = "https://username:password@input-prd-p-xl29ahe4v1h3.cloud.splunk.com:8089/?index=development"
+
+func main() {
+	if s, err := splunk.New(splunkURL); err == nil {
+		sawmill.AddHandler("splunk", s)
+	}
+}
+```
+
+![Example](http://i.imgur.com/ZRxSEte.png)
 
 ### [Syslog](https://github.com/phemmer/sawmill/tree/master/handler/syslog)
 

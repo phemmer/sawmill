@@ -121,12 +121,6 @@ func New(protocol string, addr string, facility facility, templateString string)
 // dial is based on log/syslog.Dial().
 // It was copied out as log/syslog.Dial() doesn't properly use the basename of ARGV[0].
 func (sw *SyslogHandler) dial() error {
-	if sw.syslogConnection != nil {
-		sw.syslogConnection.Close()
-		sw.syslogConnection = nil
-	}
-
-	// based on log/syslog.Dial()
 	if sw.syslogProtocol == "" || sw.syslogProtocol == "unix" {
 		logTypes := []string{"unixgram", "unix"}
 		var logPaths []string
@@ -171,13 +165,6 @@ func (sw *SyslogHandler) sendMessage(event *event.Event, message []byte) error {
 	pid := os.Getpid()
 
 	data := []byte(fmt.Sprintf("<%d>%s %s[%d]: %s\n", priority, timestamp, tag, pid, message))
-
-	if sw.syslogConnection == nil {
-		err := sw.dial()
-		if err != nil {
-			return err
-		}
-	}
 
 	_, err := sw.syslogConnection.Write(data)
 	if err == nil { // write success

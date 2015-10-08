@@ -13,18 +13,18 @@ import (
 )
 
 func TestNew_http(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpSvr))
+	sw, err := New(splunkHttpURL)
 	assert.NoError(t, err)
 	assert.NotNil(t, sw)
 }
 func TestNew_https(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkHttpsURL)
 	assert.NoError(t, err)
 	assert.NotNil(t, sw)
 }
 
 func TestNew_noUser(t *testing.T) {
-	u, err := url.Parse(splunkURL(splunkHttpSvr))
+	u, err := url.Parse(splunkHttpURL)
 	require.NoError(t, err)
 	u.User = nil
 	_, err = New(u.String())
@@ -32,7 +32,7 @@ func TestNew_noUser(t *testing.T) {
 }
 
 func TestNew_badUser(t *testing.T) {
-	u, err := url.Parse(splunkURL(splunkHttpSvr))
+	u, err := url.Parse(splunkHttpURL)
 	require.NoError(t, err)
 	u.User = url.UserPassword("foo", "bar")
 	_, err = New(u.String())
@@ -40,7 +40,7 @@ func TestNew_badUser(t *testing.T) {
 }
 
 func TestNew_queryParams(t *testing.T) {
-	u, err := url.Parse(splunkURL(splunkHttpSvr))
+	u, err := url.Parse(splunkHttpURL)
 	require.NoError(t, err)
 
 	values := u.Query()
@@ -60,7 +60,7 @@ func TestNew_queryParams(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkHttpsURL)
 	require.NoError(t, err)
 
 	key, err := sw.login()
@@ -72,7 +72,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestGetSessionKey(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkHttpsURL)
 	require.NoError(t, err)
 
 	sw.getSessionKey()
@@ -86,7 +86,7 @@ func TestGetSessionKey(t *testing.T) {
 }
 
 func TestGetSessionKey_expired(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkHttpsURL)
 	require.NoError(t, err)
 
 	sw.getSessionKey()
@@ -103,7 +103,7 @@ func TestGetSessionKey_expired(t *testing.T) {
 }
 
 func TestEvent(t *testing.T) {
-	sw, err := New(splunkURL(splunkHttpsSvr))
+	sw, err := New(splunkHttpsURL)
 	require.NoError(t, err)
 
 	logEvent := event.New(1, event.Warning, "testing Event()", map[string]interface{}{"test": "TestEvent"}, false)

@@ -92,19 +92,24 @@ func (ss *splunkServer) ServeHTTPReceiversSimple(w http.ResponseWriter, r *http.
 var (
 	splunkSvr      = &splunkServer{}
 	splunkHttpSvr  *httptest.Server
+	splunkHttpURL  string
 	splunkHttpsSvr *httptest.Server
+	splunkHttpsURL string
 )
-
-func splunkURL(s *httptest.Server) string {
-	u, _ := url.Parse(s.URL)
-	u.User = url.UserPassword("admin", "knockknock")
-	return u.String()
-}
 
 func TestMain(m *testing.M) {
 	os.Exit(testMain(m))
 }
 func testMain(m *testing.M) int {
+	// set up an http server
+	splunkHttpSvr = httptest.NewServer(splunkSvr)
+	defer splunkHttpSvr.Close()
+
+	u, _ := url.Parse(splunkHttpSvr.URL)
+	u.User = url.UserPassword("admin", "knockknock")
+	splunkHttpURL = u.String()
+
+	// set up an https server
 	splunkHttpsSvr = httptest.NewTLSServer(splunkSvr)
 	defer splunkHttpsSvr.Close()
 	cert, _ := x509.ParseCertificate(splunkHttpsSvr.TLS.Certificates[0].Certificate[0])
@@ -112,8 +117,10 @@ func testMain(m *testing.M) int {
 	// getHttpsClient causes the server to dump a TLS error during the probe. so make it shut up
 	splunkHttpsSvr.Config.ErrorLog = log.New(ioutil.Discard, "", 0)
 
-	splunkHttpSvr = httptest.NewServer(splunkSvr)
-	defer splunkHttpSvr.Close()
+	u, _ = url.Parse(splunkHttpsSvr.URL)
+	u.User = url.UserPassword("admin", "knockknock")
+	splunkHttpsURL = u.String()
 
+	// run the tests
 	return m.Run()
 }

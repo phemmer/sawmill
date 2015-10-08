@@ -20,6 +20,7 @@ type splunkServerToken struct {
 	SessionKey string
 	expires    time.Time
 }
+
 type splunkServerEvent struct {
 	message    string
 	host       string
@@ -27,70 +28,77 @@ type splunkServerEvent struct {
 	sourcetype string
 	index      string
 }
+
 type splunkServer struct {
 	tokens []*splunkServerToken
 	events []*splunkServerEvent
 }
 
-func (server *splunkServer) makeToken() *splunkServerToken {
-	token := &splunkServerToken{
+func (ss *splunkServer) makeToken() *splunkServerToken {
+	t := &splunkServerToken{
 		SessionKey: strconv.FormatInt(rand.Int63(), 36),
 		expires:    time.Now().Add(time.Minute * 60),
 	}
-	server.tokens = append(server.tokens, token)
-	return token
+	ss.tokens = append(ss.tokens, t)
+	return t
 }
-func (server *splunkServer) checkToken(sessionKey string) bool {
-	for _, token := range server.tokens {
-		if token.SessionKey == sessionKey && token.expires.After(time.Now()) {
+
+func (ss *splunkServer) checkToken(sessionKey string) bool {
+	for _, t := range ss.tokens {
+		if t.SessionKey == sessionKey && t.expires.After(time.Now()) {
 			return true
 		}
 	}
 	return false
 }
 
-func (server *splunkServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (ss *splunkServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/services/auth/login" {
-		server.ServeHTTPLogin(w, r)
+		ss.ServeHTTPLogin(w, r)
 	} else if r.URL.Path == "/services/receivers/simple" {
-		server.ServeHTTPReceiversSimple(w, r)
+		ss.ServeHTTPReceiversSimple(w, r)
 	}
 	return
 }
-func (server *splunkServer) ServeHTTPLogin(w http.ResponseWriter, r *http.Request) {
+
+func (ss *splunkServer) ServeHTTPLogin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	if !(r.Form.Get("username") == "admin" && r.Form.Get("password") == "knockknock") {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	json.NewEncoder(w).Encode(server.makeToken())
+	json.NewEncoder(w).Encode(ss.makeToken())
 }
-func (server *splunkServer) ServeHTTPReceiversSimple(w http.ResponseWriter, r *http.Request) {
-	authorization := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
-	if len(authorization) < 2 || authorization[0] != "Splunk" || !server.checkToken(authorization[1]) {
+
+func (ss *splunkServer) ServeHTTPReceiversSimple(w http.ResponseWriter, r *http.Request) {
+	auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+	if len(auth) < 2 || auth[0] != "Splunk" || !ss.checkToken(auth[1]) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	event := &splunkServerEvent{}
 	body, _ := ioutil.ReadAll(r.Body)
-	event.message = string(body)
-	event.index = r.URL.Query().Get("index")
-	event.host = r.URL.Query().Get("host")
-	event.source = r.URL.Query().Get("source")
-	event.sourcetype = r.URL.Query().Get("sourcetype")
-	server.events = append(server.events, event)
+	e := &splunkServerEvent{
+		message:    string(body),
+		index:      r.URL.Query().Get("index"),
+		host:       r.URL.Query().Get("host"),
+		source:     r.URL.Query().Get("source"),
+		sourcetype: r.URL.Query().Get("sourcetype"),
+	}
+	ss.events = append(ss.events, e)
 }
 
-var splunkSvr = &splunkServer{}
-var splunkHttpSvr *httptest.Server
-var splunkHttpsSvr *httptest.Server
+var (
+	splunkSvr      = &splunkServer{}
+	splunkHttpSvr  *httptest.Server
+	splunkHttpsSvr *httptest.Server
+)
 
-func splunkURL(svr *httptest.Server) string {
-	svrURL, _ := url.Parse(svr.URL)
-	svrURL.User = url.UserPassword("admin", "knockknock")
-	return svrURL.String()
+func splunkURL(s *httptest.Server) string {
+	u, _ := url.Parse(s.URL)
+	u.User = url.UserPassword("admin", "knockknock")
+	return u.String()
 }
 
 func TestMain(m *testing.M) {

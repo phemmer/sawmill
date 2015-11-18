@@ -42,6 +42,7 @@ type Logger struct {
 	mutex           sync.RWMutex
 	waitgroup       sync.WaitGroup
 	lastEventId     uint64
+	syncEnabled     uint32
 }
 
 // NewLogger constructs a Logger.
@@ -257,6 +258,10 @@ func (logger *Logger) Event(level event.Level, message string, fields ...interfa
 	}
 	logger.mutex.RUnlock()
 
+	if logger.GetSync() {
+		logger.Sync(eventId)
+	}
+
 	return eventId
 }
 
@@ -332,4 +337,19 @@ func (logger *Logger) Sync(eventId uint64) {
 		eventHandlerSpec.lastProcessedEventIdCond.L.Unlock()
 	}
 	logger.mutex.RUnlock()
+}
+
+// SetSync controls synchronous event mode. When set to true, a function call
+// to generate an event does not return until the event has been processed.
+func (logger *Logger) SetSync(enabled bool) {
+	if enabled {
+		atomic.StoreUint32(&logger.syncEnabled, 1)
+	} else {
+		atomic.StoreUint32(&logger.syncEnabled, 0)
+	}
+}
+
+// GetSync indicates whether syncronous mode is enabled.
+func (logger *Logger) GetSync() bool {
+	return atomic.LoadUint32(&logger.syncEnabled) == 1
 }

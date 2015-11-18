@@ -264,6 +264,54 @@ func TestSync(t *testing.T) {
 	}
 }
 
+func TestSetGetSync(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	logger.SetSync(true)
+	assert.True(t, logger.GetSync())
+
+	logger.SetSync(false)
+	assert.False(t, logger.GetSync())
+}
+
+func TestSyncMode(t *testing.T) {
+	logger := NewLogger()
+	defer logger.Stop()
+
+	handler := channel.NewHandler()
+	logger.AddHandler("TestEvent", handler)
+	logger.SetSync(true)
+
+	//TODO might be nicer to have something where we get a stack trace, start the
+	// operation, get another stack trace, find the new goroutine, and verify it's
+	// within a logger.Sync() call.
+	for i := 0; i < 100; i++ {
+		cond := sync.NewCond(&sync.Mutex{})
+		complete := false
+		go func() {
+			logger.Info("Test sync", Fields{"i": i})
+			cond.L.Lock()
+			complete = true
+			cond.Broadcast()
+			cond.L.Unlock()
+		}()
+
+		runtime.Gosched()
+
+		cond.L.Lock()
+		assert.False(t, complete)
+		cond.L.Unlock()
+
+		// unblock the .Info() call
+		cond.L.Lock()
+		handler.Next(time.Millisecond)
+		cond.Wait()
+		assert.True(t, complete)
+		cond.L.Unlock()
+	}
+}
+
 func TestSetStackMinLevel(t *testing.T) {
 	logger := NewLogger()
 	defer logger.Stop()

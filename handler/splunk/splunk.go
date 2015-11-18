@@ -62,11 +62,11 @@ type SplunkHandler struct {
 // New constructs a new splunk handler.
 //
 // The URL parameter is the URL of the Splunk API endpoint (e.g. https://user:pass@splunk.example.com:8089), and must contain authentication credentials.
-// The URL may include a few query parameters which override default settings.
-// * Index - The index to send events to. Default: "default"
-// * SourceType - The source type to report log entries as. Default: "syslog"
-// * Hostname - The hostname to report as the origin of the log entries. Default: os.Hostname()
-// * Source - The source metadata parameter to send log entries with. Default: base(os.Argv[0])
+// The URL may include a few query parameters which override default settings:
+//  index      - The index to send events to. Default: "default"
+//  sourcetype - The source type to report log entries as. Default: "syslog"
+//  hostname   - The hostname to report as the origin of the log entries. Default: os.Hostname()
+//  source     - The source metadata parameter to send log entries with. Default: base(os.Argv[0])
 //
 // If the Splunk server uses https and has a cert not recognized by a standard certificate authority, you can use splunk.CACerts to add the CA/server certificate.
 func New(splunkURL string) (*SplunkHandler, error) {

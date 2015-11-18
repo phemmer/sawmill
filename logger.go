@@ -237,8 +237,17 @@ func (logger *Logger) Event(level event.Level, message string, fields ...interfa
 	}
 
 	getStack := int32(level) >= atomic.LoadInt32(&logger.stackMinLevel)
-	eventId := atomic.AddUint64(&logger.lastEventId, 1)
-	logEvent := event.New(eventId, level, message, eventFields, getStack)
+	//TODO do we want to just remove the id param from event.New()?
+	logEvent := event.New(0, level, message, eventFields, getStack)
+
+	return logger.SendEvent(logEvent)
+}
+
+// SendEvent queues the given event.
+// The event's `Id` field will be updated with a value that can be used by
+// Sync(). This value is also provided as the return value for convenience.
+func (logger *Logger) SendEvent(logEvent *event.Event) uint64 {
+	logEvent.Id = atomic.AddUint64(&logger.lastEventId, 1)
 
 	logger.mutex.RLock()
 	for _, eventHandlerSpec := range logger.eventHandlerMap {
@@ -259,10 +268,10 @@ func (logger *Logger) Event(level event.Level, message string, fields ...interfa
 	logger.mutex.RUnlock()
 
 	if logger.GetSync() {
-		logger.Sync(eventId)
+		logger.Sync(logEvent.Id)
 	}
 
-	return eventId
+	return logEvent.Id
 }
 
 // Emergency generates an event at the emergency level.

@@ -127,6 +127,13 @@ func Event(level event.Level, message string, fields ...interface{}) uint64 {
 	return DefaultLogger().Event(level, message, fields...)
 }
 
+// SendEvent queues the given event.
+// The event's `Id` field will be updated with a value that can be used by
+// Sync(). This value is also provided as the return value for convenience.
+func SendEvent(logEvent *event.Event) uint64 {
+	return DefaultLogger().SendEvent(logEvent)
+}
+
 // Emergency generates an event at the emergency level.
 // It returns an event Id that can be used with Sync().
 func Emergency(message string, fields ...interface{}) uint64 {

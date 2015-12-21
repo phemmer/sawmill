@@ -6,11 +6,13 @@ package writer
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"os"
+	"text/template"
+
 	"github.com/phemmer/sawmill/event"
 	"github.com/phemmer/sawmill/event/formatter"
 	"golang.org/x/crypto/ssh/terminal"
-	"io"
-	"text/template"
 )
 
 // IsTerminal returns whether the given stream (File) is attached to a TTY.
@@ -43,6 +45,19 @@ func New(output io.Writer, templateString string) (*WriterHandler, error) {
 		Template: formatterTemplate,
 	}
 	return handler, nil
+}
+
+// Append constructs a new WriterHandler which appends to the file at the given
+// path, creating it if necessary.
+// templateString must be a template supported by the sawmill/event/formatter package.
+// If the templateString is empty, the WriterHandler will use sawmill/event/formatter.SIMPLE_FORMAT.
+func Append(path string, mode os.FileMode, templateString string) (*WriterHandler, error) {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, mode)
+	if err != nil {
+		return nil, err
+	}
+
+	return New(f, templateString)
 }
 
 // Event accepts an event, formats it, and writes it to the WriterHandler's Output.

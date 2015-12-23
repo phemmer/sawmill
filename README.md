@@ -147,7 +147,7 @@ Godoc: http://godoc.org/github.com/phemmer/sawmill/handler/syslog
 The writer handler sends events to any `io.Writer` object. This can be STDOUT/STDERR, a normal file, or anything.  
 The events can be formatted before being written out. The writer includes several pre-defined formats, including some which use colorization and tabulation to make the events easy to read on a console.
 
-
+Readme: https://github.com/phemmer/sawmill/blob/master/handler/writer/README.md  
 Godoc: http://godoc.org/github.com/phemmer/sawmill/handler/writer
 
 ## Utility handlers
